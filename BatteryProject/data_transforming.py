@@ -28,6 +28,8 @@ def transform_data():
     indexes_list = df.index
     column_list = df.columns
 
+    initialize_files(df, transformed_data_path)
+
     for file_name in onlyfiles[0:5]:
         file_path = os.path.join(initial_data_path, file_name)
         df = pd.read_json(file_path)
@@ -42,9 +44,16 @@ def valide_shape(df,indexes,cols,one_val_cols,NaN_cols):
     for col in NaN_cols:
         assert(df[col].isna().sum()== 21)
 
-def initialize_files(path):
-
-    pass
+def initialize_files(df, path):
+    file_path = os.path.join(path, 'test_details.csv')
+    with open(file_path, 'w') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=one_val_cols_list)
+        writer.writeheader()
+    for values in df.index:
+        file_path = os.path.join(path, f"summary_{values}.csv")
+        with open(file_path, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
+            writer.writeheader()
 
 def add_lines(df,path):
     #write on the main file listing batteries
@@ -55,8 +64,16 @@ def add_lines(df,path):
         dict[val] = df[val].iloc[0]
     with open(file_path, 'a') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=dict.keys())
-        writer.writeheader()
         writer.writerow(dict)
+
+    for values in df.index:
+        if isinstance(df['summary'][values], float) == False:
+            file_path = os.path.join(path, f"summary_{values}.csv")
+            with open(file_path, 'a') as csvfile:
+                writer = csv.writer(csvfile)
+                print([df['barcode'].iloc[0]])
+                writer.writerow([df['barcode'].iloc[0]] + df['summary'][values])
+
     print("file written")
 
 
