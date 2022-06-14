@@ -156,20 +156,21 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     """ export """
     tmp.to_csv(csv_file_out, index=False)
 
+
 def get_bad_cells_barcode(df):
     """
     # utilisation
-    cells_to_drop = get_bad_cells_barcode(tmp)
+    cells_to_drop = get_bad_cells_barcode(df)
 
     # observations à enlever (batch1)
     for c in cells_to_drop[0]:
-        print(tmp[tmp["barcode"] == c])
+        print(df[df["barcode"] == c])
     # observations à enlever (batch2)
     for c in cells_to_drop[1]:
-        print(tmp[tmp["barcode"] == c])
+        print(df[df["barcode"] == c])
     # observations à enlever (batch3)
     for c in cells_to_drop[2]:
-        print(tmp[tmp["barcode"] == c])
+        print(df[df["barcode"] == c])
     """
     bad_cells_b1 = [8, 10, 12, 13, 22]
     bad_cells_b2 = [7, 8, 9, 15, 16]
