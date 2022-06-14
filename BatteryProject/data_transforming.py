@@ -142,4 +142,5 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     tmp.to_csv(csv_file_out, index=False)
 
 #file_path = os.path.join(path, 'test_details.csv')
-#extract_protocol_file(file_path, file_path + "_out")
+#file_path_out = os.path.join(path, 'test_details_out.csv')
+#extract_protocol_file(file_path, file_path_out)
