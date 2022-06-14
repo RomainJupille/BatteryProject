@@ -142,7 +142,6 @@ def add_lines_data(barcode, file_names,path_input,path_output):
     '''
 
     dict_df = {}
-
     for file_name in file_names:
         #create a dict containing all the df corresponding to barcode
         print(file_name)
@@ -183,6 +182,153 @@ def add_lines_data(barcode, file_names,path_input,path_output):
             writer = csv.writer(csvfile)
             writer.writerow(data_list)
 
+    for file_name in file_names:
+        #create a dict containing all the df corresponding to barcode
+        print(file_name)
+
+        file_path = os.path.join(path_input, file_name)
+        dict_df[file_name] = pd.read_json(file_path)
+
+    values = dict_df[file_names[0]].index
+
+    for value in values:
+        data_list = []
+        for key, df in dict_df.items():
+            if isinstance(df['summary'][value], float) == False:
+                data_list = df['summary'][value] + data_list
+        data_list = [barcode] + data_list
+
+        file_path = os.path.join(path_output, f"summary_{value}.csv")
+        with open(file_path, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(data_list)
+
+    for value in values:
+        data_list = []
+        for key, df in dict_df.items():
+            if isinstance(df['cycles_interpolated'][value], float) == False:
+                nl =  np.array(df['cycles_interpolated'][value])
+                try:
+                    nl = nl.astype('float32')
+                    print('reduction done')
+                except:
+                    pass
+                nl = list(nl)
+                data_list = nl + data_list
+        data_list = [barcode] + data_list
+
+        file_path = os.path.join(path_output, f"cycles_interpolated_{value}.csv")
+        with open(file_path, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(data_list)
+            
     print("file written")
 
-transform_data()
+
+
+
+def extract_protocol_string(protocol):
+    """ protocol extraction string """
+    res = {}
+    protocol = protocol.lower()
+
+    tmp = protocol.split("\\")
+    tmp1 = (tmp[1].split("-")[1]).split("c")
+
+    batch = tmp[0]
+    c1 = tmp1[0].split("c")[0]
+    per = protocol.split("per")[0]
+    c2 = protocol.split("per_")[1].split("c")[0]
+
+    res['batch'] = batch.split("_")[0]
+    res["c1"] = float(c1.replace("_","."))
+    res["per"] = int(per[-2:].replace("_", ""))
+    res["c2"] = float(c2.replace("_","."))
+    res['newstructure'] = int(protocol.find("newstructure") >= 0)
+    return res
+
+def extract_protocol_list(protocols, value):
+    """ protocol extraction list """
+    res = []
+    for protocol in protocols:
+        res.append(extract_protocol_string(protocol)[value])
+    return res
+
+
+def extract_protocol_file(csv_file_in, csv_file_out):
+    """
+    # utilisation:
+    file_path = os.path.join(path, 'test_details.csv')
+    file_path_out = os.path.join(path, 'test_details_out.csv')
+    extract_protocol_file(file_path, file_path_out)
+    """
+
+    """ csv import """
+    df = pd.read_csv(csv_file_in)
+    tmp = df.copy()
+
+    """ feature transformation """
+    tmp['batch'] = extract_protocol_list(tmp['protocol'], "batch")
+    tmp['c1'] = extract_protocol_list(tmp['protocol'], "c1")
+    tmp['c2'] = extract_protocol_list(tmp['protocol'], "c2")
+    tmp['per'] = extract_protocol_list(tmp['protocol'], "per")
+    tmp['newstructure'] = extract_protocol_list(tmp['protocol'], "newstructure")
+
+    """ clean """
+    #tmp["barcode"] = tmp["barcode"].str.upper()
+
+    """ drop """
+    tmp.drop(columns=['protocol'], inplace=True)
+    tmp.drop_duplicates(subset=['barcode'], inplace=True, ignore_index=True)
+    tmp.drop(columns=['@module'], inplace=True)
+    tmp.drop(columns=['@class'], inplace=True)
+
+    """ export """
+    tmp.to_csv(csv_file_out, index=False)
+
+
+def get_bad_cells_barcode(df):
+    """
+    # utilisation
+    cells_to_drop = get_bad_cells_barcode(df)
+
+    # observations à enlever (batch1)
+    for c in cells_to_drop[0]:
+        print(df[df["barcode"] == c])
+    # observations à enlever (batch2)
+    for c in cells_to_drop[1]:
+        print(df[df["barcode"] == c])
+    # observations à enlever (batch3)
+    for c in cells_to_drop[2]:
+        print(df[df["barcode"] == c])
+    """
+    bad_cells_b1 = [8, 10, 12, 13, 22]
+    bad_cells_b2 = [7, 8, 9, 15, 16]
+    bad_cells_b3 = [37, 2, 23, 32, 42, 43]
+    batches_date = ['2017-05-12', '2017-06-30', '2018-04-12']
+    bad_cells_batches = [ [], [], [] ]
+    # batch 1
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[1]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[2]].index)
+    for bc in bad_cells_b1:
+        bad_cells_batches[0].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    # batch 2
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[0]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[2]].index)
+    for bc in bad_cells_b2:
+        bad_cells_batches[1].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    # batch 2
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[0]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[1]].index)
+    for bc in bad_cells_b3:
+        bad_cells_batches[2].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    return bad_cells_batches
+
+def preprocessing_batch_feature_to_numeric(df):
+    batches_date = ['2017-05-12', '2017-06-30', '2018-04-12']
+    for idx, batch_date in enumerate(batches_date):
+        df.loc[df['batch'] == batch_date, "batch"] = idx
+    return df
