@@ -31,7 +31,7 @@ def transform_data():
     initialize_files(df, transformed_data_path)
 
     i = 0
-    for file_name in onlyfiles[0:5]:
+    for file_name in onlyfiles[0:30]:
         '''
         reading each JSON file, and spread data into multiple csv files
         data dispatching is done by add_line method
@@ -53,7 +53,8 @@ def transform_data():
     i=0
     for barcode, file_names in files_dict.items():
         add_lines_data(barcode, file_names,initial_data_path,transformed_data_path)
-        print("Barcodes {i} read and the data has been added to the csv files")
+        print(f"Barcodes {i} read and the data has been added to the csv files")
+        i+=1
 
 def valide_shape(df,indexes,cols,one_val_cols,NaN_cols):
     '''validate that the file has the same shape as the 1st file opened'''
@@ -100,42 +101,40 @@ def add_lines_data(barcode, file_names,path_input,path_output):
     Add data to all csv files
     The method manages the duplicate codebars
     '''
+
+    dict_df = {}
+
     for file_name in file_names:
         #create a dict containing all the df corresponding to barcode
-        dict_df = {}
+        print(file_name)
+
         file_path = os.path.join(path_input, file_name)
         dict_df[file_name] = pd.read_json(file_path)
 
     values = dict_df[file_names[0]].index
 
     for value in values:
-        list = [barcode]
+        list = []
         for key, df in dict_df.items():
             if isinstance(df['summary'][value], float) == False:
-                list = list + df['summary'][value]
+                list = df['summary'][value] + list
+        list = [barcode] + list
 
         file_path = os.path.join(path_output, f"summary_{value}.csv")
         with open(file_path, 'a') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(list)
 
-    for value in values:
-        list = [barcode]
-        for key, df in dict_df.items():
-            if isinstance(df['cycles_interpolated'][value], float) == False:
-                list = list + df['cycles_interpolated'][value]
+    # for value in values:
+    #     list = [barcode]
+    #     for key, df in dict_df.items():
+    #         if isinstance(df['cycles_interpolated'][value], float) == False:
+    #             list = list + df['cycles_interpolated'][value]
 
-        file_path = os.path.join(path_output, f"cycles_interpolated_{value}.csv")
-        with open(file_path, 'a') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(list)
-
-    # for values in df.index:
-    #     if isinstance(df['cycles_interpolated'][values], float) == False:
-    #         file_path = os.path.join(path, f"cycles_interpolated_{values}.csv")
-    #         with open(file_path, 'a') as csvfile:
-    #             writer = csv.writer(csvfile)
-    #             writer.writerow([df['barcode'].iloc[0].upper()] + df['cycles_interpolated'][values])
+    #     file_path = os.path.join(path_output, f"cycles_interpolated_{value}.csv")
+    #     with open(file_path, 'a') as csvfile:
+    #         writer = csv.writer(csvfile)
+    #         writer.writerow(list)
 
     print("file written")
 
