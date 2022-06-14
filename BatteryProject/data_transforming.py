@@ -128,6 +128,7 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     """ csv import """
     df = pd.read_csv(csv_file_in)
     tmp = df.copy()
+
     """ feature transformation """
     tmp['batch'] = extract_protocol_list(tmp['protocol'], "batch")
     tmp['c1'] = extract_protocol_list(tmp['protocol'], "c1")
@@ -135,9 +136,15 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     tmp['per'] = extract_protocol_list(tmp['protocol'], "per")
     tmp['newstructure'] = extract_protocol_list(tmp['protocol'], "newstructure")
 
+    """ clean """
+    #tmp["barcode"] = tmp["barcode"].str.upper()
+
     """ drop """
     tmp.drop(columns=['protocol'], inplace=True)
     tmp.drop_duplicates(subset=['barcode'], inplace=True, ignore_index=True)
+    #tmp.drop(columns=['@module'], inplace=True)
+    #tmp.drop(columns=['@class'], inplace=True)
+
     """ export """
     tmp.to_csv(csv_file_out, index=False)
 
