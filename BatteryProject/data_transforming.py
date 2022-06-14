@@ -39,7 +39,7 @@ def transform_data():
         df = pd.read_json(file_path)
         valide_shape(df,indexes_list,column_list,one_val_cols_list,NaN_cols_list)
         add_lines(df,transformed_data_path)
-        print(f"file {i}")
+        print(f"File {i}")
         i += 1
 
 def valide_shape(df,indexes,cols,one_val_cols,NaN_cols):
@@ -57,16 +57,16 @@ def initialize_files(df, path):
     with open(file_path, 'w') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=one_val_cols_list)
         writer.writeheader()
-    for values in df.index:
-        file_path = os.path.join(path, f"summary_{values}.csv")
-        with open(file_path, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
-            writer.writeheader()
-    for values in df.index:
-        file_path = os.path.join(path, f"cycles_interpolated_{values}.csv")
-        with open(file_path, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
-            writer.writeheader()
+    # for values in df.index:
+    #     file_path = os.path.join(path, f"summary_{values}.csv")
+    #     with open(file_path, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
+    #         writer.writeheader()
+    # for values in df.index:
+    #     file_path = os.path.join(path, f"cycles_interpolated_{values}.csv")
+    #     with open(file_path, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
+    #         writer.writeheader()
 
 def add_lines(df,path):
     '''add in each csv file, one line of data (one per battery)'''
@@ -75,6 +75,8 @@ def add_lines(df,path):
     dict = {}
     for val in one_val_cols_list:
         dict[val] = df[val].iloc[0]
+    dict['barcode'] = dict['barcode'].upper()
+
     with open(file_path, 'a') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=dict.keys())
         writer.writerow(dict)
