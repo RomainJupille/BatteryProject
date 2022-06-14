@@ -96,8 +96,9 @@ def add_lines(df,path):
     print("file written")
 
 
+
 def extract_protocol_string(protocol):
-    """protocol extraction string"""
+    """ protocol extraction string """
     res = {}
     protocol = protocol.lower()
 
@@ -113,6 +114,7 @@ def extract_protocol_string(protocol):
     res["c1"] = float(c1.replace("_","."))
     res["per"] = int(per[-2:].replace("_", ""))
     res["c2"] = float(c2.replace("_","."))
+    res['newstructure'] = int(protocol.find("newstructure") >= 0)
     return res
 
 def extract_protocol_list(protocols, value):
@@ -131,6 +133,8 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     tmp['c1'] = extract_protocol_list(tmp['protocol'], "c1")
     tmp['c2'] = extract_protocol_list(tmp['protocol'], "c2")
     tmp['per'] = extract_protocol_list(tmp['protocol'], "per")
+    tmp['newstructure'] = extract_protocol_list(tmp['protocol'], "newstructure")
+
     """ drop """
     tmp.drop(columns=['protocol'], inplace=True)
     tmp.drop_duplicates(subset=['barcode'], inplace=True, ignore_index=True)
