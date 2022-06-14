@@ -96,4 +96,46 @@ def add_lines(df,path):
     print("file written")
 
 
-transform_data()
+def extract_protocol_string(protocol):
+    """protocol extraction string"""
+    res = {}
+    protocol = protocol.lower()
+
+    tmp = protocol.split("\\")
+    tmp1 = (tmp[1].split("-")[1]).split("c")
+
+    batch = tmp[0]
+    c1 = tmp1[0].split("c")[0]
+    per = protocol.split("per")[0]
+    c2 = protocol.split("per_")[1].split("c")[0]
+
+    res['batch'] = batch.split("_")[0]
+    res["c1"] = float(c1.replace("_","."))
+    res["per"] = int(per[-2:].replace("_", ""))
+    res["c2"] = float(c2.replace("_","."))
+    return res
+
+def extract_protocol_list(protocols, value):
+    """ protocol extraction list """
+    res = []
+    for protocol in protocols:
+        res.append(extract_protocol_string(protocol)[value])
+    return res
+
+def extract_protocol_file(csv_file_in, csv_file_out):
+    """ csv import """
+    df = pd.read_csv(csv_file_in)
+    tmp = df.copy()
+    """ feature transformation """
+    tmp['batch'] = extract_protocol_list(tmp['protocol'], "batch")
+    tmp['c1'] = extract_protocol_list(tmp['protocol'], "c1")
+    tmp['c2'] = extract_protocol_list(tmp['protocol'], "c2")
+    tmp['per'] = extract_protocol_list(tmp['protocol'], "per")
+    """ drop """
+    tmp.drop(columns=['protocol'], inplace=True)
+    tmp.drop_duplicates(subset=['barcode'], inplace=True, ignore_index=True)
+    """ export """
+    tmp.to_csv(csv_file_out, index=False)
+
+#file_path = os.path.join(path, 'test_details.csv')
+#extract_protocol_file(file_path, file_path + "_out")
