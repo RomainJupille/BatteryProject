@@ -16,7 +16,7 @@ def transform_data():
     dir_path = os.path.dirname(__file__)
     initial_data_path = os.path.join(dir_path, "..", "..", "raw_data", "initial_data")
     initial_data_path = os.path.normpath(initial_data_path)
-    transformed_data_path = os.path.join(dir_path, "..", "..", "raw_data", "transformed_data_test")
+    transformed_data_path = os.path.join(dir_path, "..", "..", "raw_data", "transformed_data")
     transformed_data_path = os.path.normpath(transformed_data_path)
 
     # récupération des noms des fichiers
@@ -29,12 +29,14 @@ def transform_data():
     column_list = df.columns
 
     initialize_files(df, transformed_data_path)
-
-    for file_name in onlyfiles[0:5]:
+    i = 0
+    for file_name in onlyfiles:
         file_path = os.path.join(initial_data_path, file_name)
         df = pd.read_json(file_path)
         valide_shape(df,indexes_list,column_list,one_val_cols_list,NaN_cols_list)
         add_lines(df,transformed_data_path)
+        print(f"file {i}")
+        i += 1
 
 def valide_shape(df,indexes,cols,one_val_cols,NaN_cols):
     assert(df.index.all() == indexes.all())
@@ -51,6 +53,11 @@ def initialize_files(df, path):
         writer.writeheader()
     for values in df.index:
         file_path = os.path.join(path, f"summary_{values}.csv")
+        with open(file_path, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
+            writer.writeheader()
+    for values in df.index:
+        file_path = os.path.join(path, f"cycles_interpolated_{values}.csv")
         with open(file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['barcode'] +[i for i in range(0,3000)])
             writer.writeheader()
@@ -71,31 +78,16 @@ def add_lines(df,path):
             file_path = os.path.join(path, f"summary_{values}.csv")
             with open(file_path, 'a') as csvfile:
                 writer = csv.writer(csvfile)
-                print([df['barcode'].iloc[0]])
                 writer.writerow([df['barcode'].iloc[0]] + df['summary'][values])
 
+    for values in df.index:
+        if isinstance(df['cycles_interpolated'][values], float) == False:
+            file_path = os.path.join(path, f"cycles_interpolated_{values}.csv")
+            with open(file_path, 'a') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([df['barcode'].iloc[0]] + df['cycles_interpolated'][values])
+
     print("file written")
-
-
-feature_list = [
-    ['cycle_index', 'summary'],
-
-    ['discharge_capacity', 'summary'],
-    ['charge_capacity', 'summary'],
-
-    ['discharge_energy', 'summary'],
-    ['charge_energy', 'summary'],
-
-    ['dc_internal_resistance', 'summary'],
-    ['energy_efficiency', 'summary'],
-    ['charge_throughput', 'summary'],
-    ['energy_throughput', 'summary'],
-    ['charge_duration', 'summary'],
-
-
-    ['temperature_maximum', 'summary'],
-    ['temperature_average', 'summary'],
-    ['temperature_min', 'summary']]
 
 
 transform_data()
