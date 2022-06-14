@@ -124,7 +124,15 @@ def extract_protocol_list(protocols, value):
         res.append(extract_protocol_string(protocol)[value])
     return res
 
+
 def extract_protocol_file(csv_file_in, csv_file_out):
+    """
+    # utilisation:
+    file_path = os.path.join(path, 'test_details.csv')
+    file_path_out = os.path.join(path, 'test_details_out.csv')
+    extract_protocol_file(file_path, file_path_out)
+    """
+
     """ csv import """
     df = pd.read_csv(csv_file_in)
     tmp = df.copy()
@@ -142,12 +150,48 @@ def extract_protocol_file(csv_file_in, csv_file_out):
     """ drop """
     tmp.drop(columns=['protocol'], inplace=True)
     tmp.drop_duplicates(subset=['barcode'], inplace=True, ignore_index=True)
-    #tmp.drop(columns=['@module'], inplace=True)
-    #tmp.drop(columns=['@class'], inplace=True)
+    tmp.drop(columns=['@module'], inplace=True)
+    tmp.drop(columns=['@class'], inplace=True)
 
     """ export """
     tmp.to_csv(csv_file_out, index=False)
 
-#file_path = os.path.join(path, 'test_details.csv')
-#file_path_out = os.path.join(path, 'test_details_out.csv')
-#extract_protocol_file(file_path, file_path_out)
+def get_bad_cells_barcode(df):
+    """
+    # utilisation
+    cells_to_drop = get_bad_cells_barcode(tmp)
+
+    # observations à enlever (batch1)
+    for c in cells_to_drop[0]:
+        print(tmp[tmp["barcode"] == c])
+    # observations à enlever (batch2)
+    for c in cells_to_drop[1]:
+        print(tmp[tmp["barcode"] == c])
+    # observations à enlever (batch3)
+    for c in cells_to_drop[2]:
+        print(tmp[tmp["barcode"] == c])
+    """
+    bad_cells_b1 = [8, 10, 12, 13, 22]
+    bad_cells_b2 = [7, 8, 9, 15, 16]
+    bad_cells_b3 = [37, 2, 23, 32, 42, 43]
+    batches_date = ['2017-05-12', '2017-06-30', '2018-04-12']
+    bad_cells_batches = [ [], [], [] ]
+    # batch 1
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[1]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[2]].index)
+    for bc in bad_cells_b1:
+        bad_cells_batches[0].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    # batch 2
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[0]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[2]].index)
+    for bc in bad_cells_b2:
+        bad_cells_batches[1].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    # batch 2
+    tmp = df.copy()
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[0]].index)
+    tmp = tmp.drop(tmp[tmp.batch == batches_date[1]].index)
+    for bc in bad_cells_b3:
+        bad_cells_batches[2].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
+    return bad_cells_batches
