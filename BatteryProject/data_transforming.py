@@ -196,3 +196,9 @@ def get_bad_cells_barcode(df):
     for bc in bad_cells_b3:
         bad_cells_batches[2].append(tmp[tmp['channel_id'] == bc].barcode.iloc[0])
     return bad_cells_batches
+
+def preprocessing_batch_feature_to_numeric(df):
+    batches_date = ['2017-05-12', '2017-06-30', '2018-04-12']
+    for idx, batch_date in enumerate(batches_date):
+        df.loc[df['batch'] == batch_date, "batch"] = idx
+    return df
