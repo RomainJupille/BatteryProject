@@ -142,7 +142,6 @@ def add_lines_data(barcode, file_names,path_input,path_output):
     '''
 
     dict_df = {}
-
     for file_name in file_names:
         #create a dict containing all the df corresponding to barcode
         print(file_name)
@@ -183,12 +182,47 @@ def add_lines_data(barcode, file_names,path_input,path_output):
             writer = csv.writer(csvfile)
             writer.writerow(data_list)
 
+    for file_name in file_names:
+        #create a dict containing all the df corresponding to barcode
+        print(file_name)
+
+        file_path = os.path.join(path_input, file_name)
+        dict_df[file_name] = pd.read_json(file_path)
+
+    values = dict_df[file_names[0]].index
+
+    for value in values:
+        data_list = []
+        for key, df in dict_df.items():
+            if isinstance(df['summary'][value], float) == False:
+                data_list = df['summary'][value] + data_list
+        data_list = [barcode] + data_list
+
+        file_path = os.path.join(path_output, f"summary_{value}.csv")
+        with open(file_path, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(data_list)
+
+    for value in values:
+        data_list = []
+        for key, df in dict_df.items():
+            if isinstance(df['cycles_interpolated'][value], float) == False:
+                nl =  np.array(df['cycles_interpolated'][value])
+                try:
+                    nl = nl.astype('float32')
+                    print('reduction done')
+                except:
+                    pass
+                nl = list(nl)
+                data_list = nl + data_list
+        data_list = [barcode] + data_list
+
+        file_path = os.path.join(path_output, f"cycles_interpolated_{value}.csv")
+        with open(file_path, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(data_list)
+            
     print("file written")
-
-transform_data()
-
-
-
 
 
 
