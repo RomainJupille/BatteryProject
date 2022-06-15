@@ -15,7 +15,7 @@ def get_data_gcp(FEATURE_NAME,NROWS = None, RANGE_COL = None):
 
 def get_data_local(FEATURE_NAME,NROWS = None, RANGE_COL = None):
 
-    df = pd.read_csv(f"/{FEATURE_NAME}.csv",nrows = NROWS, usecols=RANGE_COL)
+    df = pd.read_csv(f"../..//{FEATURE_NAME}.csv",nrows = NROWS, usecols=RANGE_COL)
 
     return df
 
