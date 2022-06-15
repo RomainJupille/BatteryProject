@@ -1,4 +1,6 @@
 import pandas as pd
+import os
+
 from BatteryProject.params import *
 
 
@@ -13,12 +15,14 @@ def get_data_gcp(FEATURE_NAME,NROWS = None, RANGE_COL = None):
 
     return df
 
-def get_data_local(FEATURE_NAME,NROWS = None, RANGE_COL = None):
-
-    df = pd.read_csv(f"../..//{FEATURE_NAME}.csv",nrows = NROWS, usecols=RANGE_COL)
+def get_data_local(feature_name,nrows = None, range_col= None):
+    dir_path = os.path.dirname(__file__)
+    transformed_data_path = os.path.join(dir_path, "..", "..", "raw_data", "transformed_data", feature_name)
+    transformed_data_path = os.path.normpath(transformed_data_path)
+    df = pd.read_csv(transformed_data_path,nrows = nrows, usecols=range_col)
 
     return df
 
 if __name__ == '__main__':
-    df = get_data_gcp("summary_charge_capacity",None, None)
+    df = get_data_local("summary_charge_capacity.csv",None, None)
     df.info()
