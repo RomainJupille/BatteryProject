@@ -1,16 +1,17 @@
 from google.cloud import storage
 import numpy as np
 import pandas as pd
+
+
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score
 
 from BatteryProject.data import get_data_local, get_data_gcp
-from BatteryProject.ModelOne.preprocessing import get_features_target
+from BatteryProject.ModelOne.get_features import get_features_target
 from BatteryProject.ModelOne.model_params import features
-
-
 
 
 class Trainer():
@@ -27,13 +28,18 @@ class Trainer():
         self.pipeline = None
         self.raw_data = None
         self.target = None
-        self.features = None
+        self.X = None
 
 
         # for MLFlow
         #self.experiment_name = EXPERIMENT_NAME
 
     def get_data(self, features_name):
+        '''
+        Get X and y from the list of features in feature_name
+        Nan cleaning (done bu get_feature_target)
+        Train_test_split
+        '''
         self.features_name = features_name
 
         df_dict = {}
@@ -42,14 +48,15 @@ class Trainer():
             df_dict[name] = df
 
         self.raw_data = df_dict
-        self.features, self.target = get_features_target(self.raw_data, deep = self.deep, classes = self.classes)
+        self.X, self.y = get_features_target(self.raw_data, deep = self.deep, classes = self.classes)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.3)
 
         return self
 
-    def set_pipeline(self):
+    def set_pipeline(self, scaler = RobustScaler(), model = LogisticRegression(max_iter = 1000)):
         pipe = Pipeline([
-            ('scaler', RobustScaler()),
-            ('model', LogisticRegression(max_iter = 1000))])
+            ('scaler', scaler),
+            ('model', model)])
 
         self.pipeline = pipe
 
@@ -59,11 +66,15 @@ class Trainer():
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
         gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5)
-        gs_results.fit(self.features, self.target)
+        gs_results.fit(self.X_train, self.y_train)
 
         self.grid_search = gs_results
 
         return self
+
+    def eval(self):
+        self.score = accuracy_score(self.grid_search.best_estimator_.predict(self.X_test), self.y_test)
+        return self.score
 
 
     def save_model(reg):
