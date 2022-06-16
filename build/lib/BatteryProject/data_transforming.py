@@ -221,7 +221,7 @@ def add_lines_data(barcode, file_names,path_input,path_output):
         with open(file_path, 'a') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(data_list)
-
+            
     print("file written")
 
 
@@ -332,12 +332,3 @@ def preprocessing_batch_feature_to_numeric(df):
     for idx, batch_date in enumerate(batches_date):
         df.loc[df['batch'] == batch_date, "batch"] = idx
     return df
-
-
-if __name__ == '__main__':
-    dir_path = os.path.dirname(__file__)
-    file_path = os.path.join(dir_path, "..", "..", "raw_data", "transformed_data")
-    file_path = os.path.normpath(file_path)
-    file_path_in = os.path.join(file_path, 'test_details.csv')
-    file_path_out = os.path.join(file_path, 'test_details_out.csv')
-    extract_protocol_file(file_path_in, file_path_out)
