@@ -11,20 +11,29 @@ features = {
 
 
 models = {
-    'log' : [   LogisticRegression(),
+    'log' : [
+                LogisticRegression(),
                 [
-                    {
-                    'Logistic__penalty' : ['l2', None],
-                    'Logistic__solver' : ['lbfgs', 'sag'],
-                    'Logistic_C' : [0.1, 0.5, 1.0, 5.0, 10.0]
-                    },
-                    {
-                    'Logistic__penalty' : ['l2', 'l1'],
-                    'Logistic__solver' : ['liblinear'],
-                    'Logistic_C' : [0.1, 0.5, 1.0, 5.0, 10.0]
-                    }
+                {
+                'Model__penalty' : ['none'],
+                'Model__solver' : ['liblinear', 'newton-cg', 'saga']
+                },
+                {
+                'Model__penalty' : ['l2'],
+                'Model__solver' : ['lbfgs', 'sag'],
+                'Model__C' : [0.01, 0.02, 0.05,0.1,0.2, 0.5, 1.0, 2.0, 5.0]
+                },
+                {
+                'Model__penalty' : ['l2','l1'],
+                'Model__solver' : ['liblinear'],
+                'Model__C' : [0.01, 0.02, 0.05,0.1,0.2, 0.5, 1.0, 2.0, 5.0]
+                },
+                {
+                'Model__penalty' : ['elasticnet'],
+                'Model__solver' : ['saga'],
+                'Model__C' : [0.01, 0.02, 0.05,0.1,0.2, 0.5, 1.0, 2.0, 5.0],
+                'Model__l1_rate' : [0.0, 0.2, 0.4,0.6,0.8, 1.0]
+                }
                 ]
             ]
-
-
         }
