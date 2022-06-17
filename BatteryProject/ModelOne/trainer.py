@@ -3,12 +3,14 @@ from google.cloud import storage
 import numpy as np
 import pandas as pd
 from sklearn import metrics
-import mlflow
 import joblib
+from BatteryProject.params import *
+from termcolor import colored
 from mlflow.tracking import MlflowClient
 from memoized_property import memoized_property
-from termcolor import colored
-from BatteryProject.params import *
+import mlflow
+import csv
+import os
 
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
@@ -36,7 +38,7 @@ class Trainer():
         self.grid_params = grid_params
 
         # for MLFlow
-        self.experiment_name = EXPERIMENT_NAME
+        self.experiment_name = None
 
     def get_data(self, features_name):
         '''
@@ -73,6 +75,7 @@ class Trainer():
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
         gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy")
+        self.mlflow_log_param("model", "Linear")
         gs_results.fit(self.X_train, self.y_train)
 
         self.grid_search = gs_results
@@ -109,11 +112,42 @@ class Trainer():
 
         return self.evaluation
 
+    def create_save_id_model(self):
 
-    def save_model_locally(self):
+        dir_path = os.path.dirname(__file__)
+        if os.stat(os.path.join(dir_path, "nom du dossier", 'IDs.csv')).st_size == 0:
+            nb = 1
+            ID = f"00000{nb}"
+        else:
+            nb = 2
+            ID = f"00000{nb}"
+
+            if nb > 9:
+                ID = f"0000{nb}"
+            elif nb > 99:
+                ID = f"000{nb}"
+            elif nb > 999:
+                ID = f"000{nb}"
+            elif nb > 9999:
+                ID = f"00{nb}"
+            elif nb > 99999:
+                ID = f"0{nb}"
+            else:
+                ID = f"00000{nb}"
+        with open(f'IDs.csv', 'w', newline="") as csvfile:
+            csv.writer(csvfile).writerow[ID]
+        nb += 1
+
+
+    def save_model(self, model):
         """Save the model into a .joblib format"""
-        joblib.dump(self.pipeline, 'model.joblib')
-        print(colored("model.joblib saved locally", "green"))
+        ids_df = pd.read_csv("IDs.csv")
+        id = ids_df.tail(1)
+        joblib.dump(model, f'Models/model_{id}.joblib')
+        model_name = f"model_{id}"
+        EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] {model_name} + 1"
+        self.experiment_name = EXPERIMENT_NAME
+        return self.experiment_name
 
     # MLFlow methods
     @memoized_property
@@ -133,10 +167,11 @@ class Trainer():
     def mlflow_run(self):
         return self.mlflow_client.create_run(self.mlflow_experiment_id)
 
-    def mlflow_log_param(self, key, value):
+    def mlflow_log_param(self,key, value):
         self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
 
-    def mlflow_log_metric(self, key, value):
+
+    def mlflow_log_metric(self,key, value):
         self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
