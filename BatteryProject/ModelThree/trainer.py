@@ -1,8 +1,13 @@
+from telnetlib import SE
 import numpy as np
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, LSTM, GRU, Dense
 
 
 from sklearn.model_selection import train_test_split, learning_curve
-import matplotlib.pyplot as plt
+
 
 from BatteryProject.data import get_data_local
 from BatteryProject.ModelThree.get_features import get_features_target
@@ -34,11 +39,21 @@ class Trainer():
         return self
 
     def set_pipeline(self):
-        '''to be done'''
+        model = Sequential()
+        model.add(SimpleRNN(units = 4, activation = 'tanh'))
+        model.add(Dense(20, activation = 'relu'))
+        model.add(Dense(1, activation = 'linear' ))
+
+        self.model = model
         return self
 
-    def run(self, grid_params):
-        """To be done"""
+    def run(self, opt = 'rmsprop', loss = 'mse', metrics = 'mse' ):
+        self.optimizer = opt
+        self.loss = loss
+        self.metrics = metrics
+        self.model.compile(self.optimizer, self.loss, self.metrics )
+        self.model.fit(self.X_train, self.y_train)
+
         return self
 
     def print_learning_curve(self):
@@ -78,6 +93,9 @@ if __name__ == '__main__':
         'char_capa' : 'summary_charge_capacity.csv'}
     trainer = Trainer(features_name=features)
     trainer.get_data()
+    trainer.set_pipeline()
+    trainer.run()
+
     print(trainer.X_train.shape)
     print(trainer.y_train.shape)
     print(trainer.X_test.shape)
