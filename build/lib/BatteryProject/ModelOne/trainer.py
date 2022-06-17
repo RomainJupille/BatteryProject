@@ -1,9 +1,17 @@
+from email.errors import NoBoundaryInMultipartDefect
 from pyexpat import model
 from google.cloud import storage
 import numpy as np
 import pandas as pd
 from sklearn import metrics
-
+import joblib
+from BatteryProject.params import *
+from termcolor import colored
+from mlflow.tracking import MlflowClient
+from memoized_property import memoized_property
+import mlflow
+import csv
+import os
 
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
@@ -31,7 +39,7 @@ class Trainer():
         self.grid_params = grid_params
 
         # for MLFlow
-        #self.experiment_name = EXPERIMENT_NAME
+        self.experiment_name = None
 
     def get_data(self, features_name):
         '''
@@ -52,7 +60,7 @@ class Trainer():
 
         return self
 
-    def set_pipeline(self, scaler = RobustScaler(), model = LogisticRegression(max_iter = 1000)):
+    def set_pipeline(self, scaler = RobustScaler(), model = LogisticRegression(max_iter = 3000)):
         self.scaler = scaler
         self.model = model
 
@@ -68,6 +76,7 @@ class Trainer():
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
         gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy")
+        #self.mlflow_log_param("model", "Log")
         gs_results.fit(self.X_train, self.y_train)
 
         self.grid_search = gs_results
@@ -101,13 +110,64 @@ class Trainer():
         'roc_auc' : roc_auc_score(prediction, self.y_test)
         }
         self.evaluation = dic
-
+        #self.mlflow_log_metric("metrics", dic)
         return self.evaluation
 
+    def create_save_id_model(self):
+        nb = None
+        dir_path = os.path.join(os.path.dirname(__file__),'Models','IDs.csv')
+        df_ids = pd.read_csv(dir_path)
+        last_id = df_ids.values.max()
+        new_id = last_id + 1
 
-    def save_model(reg):
-        """ method that saves the model into a .joblib file and uploads it on Google Storage /models folder """
-        pass
+        with open(dir_path, "a") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([new_id.tolist()])
+        if new_id < 9:
+            self.ID = f"000{new_id}"
+        elif new_id < 99:
+            self.ID = f"00{new_id}"
+        elif new_id < 999:
+            self.ID = f"0{new_id}"
+        else:
+            self.ID = f"{new_id}"
+        return self.ID
+
+
+    def save_model(self):
+        """Save the model into a .joblib format"""
+        joblib.dump(self.best_model, f'Models/model_{self.ID}.joblib')
+        model_name = f"model_{self.ID}"
+        EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] {model_name} + 1"
+        self.experiment_name = EXPERIMENT_NAME
+        return self.experiment_name
+
+    # MLFlow methods
+    @memoized_property
+    def mlflow_client(self):
+        mlflow.set_tracking_uri(MLFLOW_URI)
+        return MlflowClient()
+
+    @memoized_property
+    def mlflow_experiment_id(self):
+        try:
+            return self.mlflow_client.create_experiment(self.experiment_name)
+        except BaseException:
+            return self.mlflow_client.get_experiment_by_name(
+                self.experiment_name).experiment_id
+
+    @memoized_property
+    def mlflow_run(self):
+        return self.mlflow_client.create_run(self.mlflow_experiment_id)
+
+    def mlflow_log_param(self,key, value):
+        self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
+
+
+    def mlflow_log_metric(self,key, value):
+        self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
     trainer = Trainer()
+    trainer.create_save_id_model()
+    trainer.save_model()
