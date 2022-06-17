@@ -52,7 +52,7 @@ class Trainer():
 
         return self
 
-    def set_pipeline(self, scaler = RobustScaler(), model = LogisticRegression(max_iter = 1000)):
+    def set_pipeline(self, scaler = RobustScaler(), model = LogisticRegression(max_iter = 3000)):
         self.scaler = scaler
         self.model = model
 
