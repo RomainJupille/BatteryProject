@@ -1,19 +1,27 @@
+from telnetlib import SE
 import numpy as np
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, LSTM, GRU, Dense
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 from sklearn.model_selection import train_test_split, learning_curve
-import matplotlib.pyplot as plt
+
 
 from BatteryProject.data import get_data_local
 from BatteryProject.ModelThree.get_features import get_features_target
+from BatteryProject.ModelThree.loss import root_mean_squared_error
 
 class Trainer():
 
-    def __init__(self, features_name = None, deep = 5, offset = 15):
+    def __init__(self, features_name = None, deep = 20, offset = 15):
         """
         features : list of features (in the shape of a dictionnary)
         """
         self.features_name = features_name
+        self.n_features = len(features_name)
         self.deep = deep
         self.offset = offset
         self.target_name = 'disc_capa'
@@ -26,20 +34,62 @@ class Trainer():
             df_dict[name] = df
 
         self.raw_data = df_dict
-        self.train_index, self.test_index = train_test_split(np.array(df_dict['disc_capa'].shape[0]) , test_size = 0.3)
-
+        self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2)
+        self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25)
         self.X_train, self.y_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
+        self.X_val, self.y_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
+        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
 
-        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
+        return self
+
+    def scaling(self):
+        self.mean_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features)
+        self.std_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features)
+
+        self.X_train_scaled = (self.X_train - self.mean_scaler) / self.std_scaler
+        self.X_val_scaled = (self.X_val - self.mean_scaler) / self.std_scaler
+        self.X_test_scaled = (self.X_test - self.mean_scaler) / self.std_scaler
 
         return self
 
     def set_pipeline(self):
-        '''to be done'''
+        model = Sequential()
+        model.add(SimpleRNN(units = 4, activation = 'tanh'))
+        model.add(Dense(20, activation = 'relu'))
+        model.add(Dense(1, activation = 'linear' ))
+
+        self.model = model
         return self
 
-    def run(self, grid_params):
-        """To be done"""
+    def run(self,
+            opt = 'rmsprop',
+            loss = 'root_mean_squared_error',
+            metrics = 'root_mean_squared_error',
+            epochs = 100,
+            batch_size = 32):
+
+        self.optimizer = opt
+        self.loss = loss
+        self.metrics = metrics
+        self.optimizer = opt
+        self.epochs = epochs
+        self.bacth_size = 32
+
+        es = EarlyStopping(patience = 10, restore_best_weights= True)
+
+        self.model.compile(
+            self.optimizer,
+            loss = self.loss,
+            metrics = self.metrics)
+
+        self.model.fit(
+            self.X_train_scaled,
+            self.y_train,
+            epochs = self.epochs,
+            batch_size=self.bacth_size,
+            validation_data= (self.X_val_scaled,self.y_val),
+            callbacks=[es])
+
         return self
 
     def print_learning_curve(self):
@@ -72,4 +122,19 @@ class Trainer():
         pass
 
 if __name__ == '__main__':
-    trainer = Trainer()
+    features = {
+        'disc_capa' : 'summary_discharge_capacity.csv',
+        'dis_ener' : 'summary_discharge_energy.csv',
+        'temp_avg' : 'summary_temperature_average.csv',
+        'char_capa' : 'summary_charge_capacity.csv'}
+    trainer = Trainer(features_name=features)
+    trainer.get_data()
+    trainer.set_pipeline()
+    trainer.run()
+
+    print(trainer.X_train.shape)
+    print(trainer.y_train.shape)
+    print(trainer.X_test.shape)
+    print(trainer.y_test.shape)
+    print(np.isnan(trainer.X_train.shape).sum())
+    print(np.isnan(trainer.X_test.shape).sum())
