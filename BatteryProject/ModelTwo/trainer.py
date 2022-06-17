@@ -28,7 +28,6 @@ class Trainer():
         self.classes = classes
         self.target_name = 'disc_capa'
         self.grid_params = grid_params
-        self.adam_params = {'learning_rate':0.01, 'beta_1':0.9, 'beta_2':0.999}
         self.pipeline = None
         self.history = None
         self.raw_data = None
@@ -65,32 +64,38 @@ class Trainer():
 
         model = models.Sequential()
 
-        # premier layer de convolution avec 16 filtres
-        model.add(layers.Conv1D(16,
-                                kernel_size=4, # int((self.deep/4)+0.5)
-                                strides=1,     # un pas de 1 (défaut)
-                                #padding='same',
-                                activation="relu",
-                                input_shape=self.X_train.shape))
-        #model.add(layers.MaxPool1D(pool_size=2))
-
-        # second layer
-        model.add(layers.Conv1D(16,
+        # layer de convolution avec 16 filtres
+        model.add(layers.Conv1D(32,
                                 kernel_size=4,
+                                strides=1,
+                                padding='same',
+                                activation="relu",
+                                input_shape=self.X_train.shape[1:]))
+        model.add(layers.MaxPool1D(pool_size=2))
+
+        model.add(layers.Conv1D(32,
+                                kernel_size=3,
+                                padding='same',
                                 activation="relu"))
-        #model.add(layers.MaxPool1D(pool_size=2))
+        model.add(layers.MaxPool1D(pool_size=2))
+
+        model.add(layers.Conv1D(32,
+                                kernel_size=2,
+                                padding='same',
+                                activation="relu"))
+        model.add(layers.MaxPool1D(pool_size=2))
 
         model.add(layers.Flatten())
         model.add(layers.Dense(100, activation='relu')) # intermediate layer
         model.add(layers.Dense(1, activation='linear'))
 
-        # optimizer
-        adam_opt = optimizers.Adam(*self.adam_params)
+        # optimizer (ATTENTION: fait planter si utilisé avec ces parametres)
+        #adam_opt = optimizers.Adam({'learning_rate':0.01, 'beta_1':0.9, 'beta_2':0.999})
 
         # regression
         model.compile(loss='mse',
-                      optimizer=adam_opt,
-                      metrics=['mae'], #'mse', 'rmse', 'rmsle'
+                      optimizer=optimizers.Adam(),
+                      metrics=['mse'], # 'mae', mse', 'rmse', 'rmsle'
                       )
         return model
 
@@ -101,13 +106,13 @@ class Trainer():
 
 
     def fit(self, model):
-        es = callbacks.EarlyStopping(patience=30, restore_best_weights=True)
+        es = callbacks.EarlyStopping(patience=20, restore_best_weights=True)
         self.history = model.fit(self.X_train, self.y_train,
                                  batch_size=16,
                                  epochs=100,
-                                 #validation_split=0.3,
+                                 validation_split=0.3,
                                  callbacks=[es],
-                                 verbose=0)
+                                 verbose=1)
 
 
     def set_pipeline_CNN(self, scaler = RobustScaler()):
@@ -140,8 +145,11 @@ class Trainer():
 
     def eval(self, model):
         #self.score = accuracy_score(self.grid_search.best_estimator_.predict(self.X_test), self.y_test)
-        return model.evaluate(self.X_test, self.y_test, verbose=0)
+        error = model.evaluate(self.X_test, self.y_test, verbose=0)
+        return error
 
+    def predict(self, model, row_to_predict):
+        return model.predict(row_to_predict)
 
     def save_model(self, reg):
         """ method that saves the model into a .joblib file and uploads it on Google Storage /models folder """
