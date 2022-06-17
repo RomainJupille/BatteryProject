@@ -9,7 +9,7 @@ from BatteryProject.ModelThree.get_features import get_features_target
 
 class Trainer():
 
-    def __init__(self, features_name = None, deep = 20, offset = 15):
+    def __init__(self, features_name = None, deep = 5, offset = 15):
         """
         features : list of features (in the shape of a dictionnary)
         """
@@ -26,10 +26,11 @@ class Trainer():
             df_dict[name] = df
 
         self.raw_data = df_dict
-        self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.3)
+        self.train_index, self.test_index = train_test_split(np.array(df_dict['disc_capa'].shape[0]) , test_size = 0.3)
+
         self.X_train, self.y_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
 
-        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
+        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
 
         return self
 
@@ -71,16 +72,4 @@ class Trainer():
         pass
 
 if __name__ == '__main__':
-    features = {
-        'disc_capa' : 'summary_discharge_capacity.csv',
-        'dis_ener' : 'summary_discharge_energy.csv',
-        'temp_avg' : 'summary_temperature_average.csv',
-        'char_capa' : 'summary_charge_capacity.csv'}
-    trainer = Trainer(features_name=features)
-    trainer.get_data()
-    print(trainer.X_train.shape)
-    print(trainer.y_train.shape)
-    print(trainer.X_test.shape)
-    print(trainer.y_test.shape)
-    print(np.isnan(trainer.X_train.shape).sum())
-    print(np.isnan(trainer.X_test.shape).sum())
+    trainer = Trainer()
