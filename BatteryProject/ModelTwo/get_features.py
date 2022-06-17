@@ -5,25 +5,12 @@ import pandas as pd
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
+# for testing purposes
 def generate_fake_Xy(deep = 5):
-    ''' génère des Xy bidons pour tester les shapes
-        afin de fiter.
-        il faudra ensuite convertir les vrais données
-    '''
-    disc_capa = np.repeat([1.068216], deep)
-    dis_ener = np.repeat([6.191177], deep)
-    temp_avg = np.repeat([29.922943], deep)
-    char_capa = np.repeat([1.441996], deep)
-    features = [
-        disc_capa,
-        dis_ener,
-        temp_avg,
-        char_capa
-    ]
-    X = np.array(features * 134)
+    features = [[1.068216, 6.191177, 29.922943, 1.441996]]
+    X = [features * deep]
+    X = np.array(X * 134)
     y = np.random.randint(low=300, high=1500, size=134)
-    y = np.repeat(y,4)
-    #y = np.reshape(y, (-1, 1))
     return X,y
 
 
@@ -48,41 +35,29 @@ def get_features_target(df_dict, offset, deep, classes):
     for key, values in df_dict.items():
         df_dict[key] = df_dict[key][filter == 0]
 
-    # target
+
+    # generation de la target
     target = []
     for cap in df_dict['disc_capa'].iloc:
         distance_to_end = len(cap[:].dropna()) - (offset + deep)
         target.append(distance_to_end)
     target = pd.Series(target)
 
-
-    ###########################################################
-    # TODO:
-    # 1 - ne pas utiliser un DataFrame!
-    # 2 - il faut transposer les données (4 features au total)
-    # 3 - il faut traiter les cas ou "offset+deep" récupèrent des NaN
-    #     (il faudra les remplacer par des 0 et les masker durant le CNN)
-    #
-    #
-    # données acutelles (avec deep=2):
-    #   [a1,a2, b1,b2, c1,c2, d1,d2, ...]
-    #
-    # données attendues par le modèle (avec deep=2):
-    #   np.array([[a1,a2, ...]
-    #             [b1,b2, ...]
-    #             [c1,c2, ...]
-    #             [d1,d2, ...]])
-    #
-    ###########################################################
-    # features
+    # generation features dans une windows (offset + deep)
     features = pd.DataFrame()
     check = pd.DataFrame()
     for key, values in df_dict.items():
-        #print(key, values)
         for column in values.iloc[:,offset+1:offset+deep+1].columns:
-            features[f'{key}_{int(column) - offset}'] = df_dict[key][column]
+            index = int(column) - offset
+            features[f'{key}_{index}'] = df_dict[key][column]
 
-    # TODO: TEST, à virer (quand le modèle sera capable de prédire)
-    features,target = generate_fake_Xy(deep)
+    # conversion dataframe -> numpy.array
+    np_features = []
+    for i in range(134):
+        dim = []
+        for j in range(deep):
+            dim.append(*features.iloc[i:i+1,j::deep].values.tolist())
+        np_features.append(dim)
+    np_features = np.array(np_features)
 
-    return features, target
+    return np_features, target
