@@ -3,7 +3,12 @@ from google.cloud import storage
 import numpy as np
 import pandas as pd
 from sklearn import metrics
-
+import mlflow
+import joblib
+from mlflow.tracking import MlflowClient
+from memoized_property import memoized_property
+from termcolor import colored
+from BatteryProject.params import *
 
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
@@ -31,7 +36,7 @@ class Trainer():
         self.grid_params = grid_params
 
         # for MLFlow
-        #self.experiment_name = EXPERIMENT_NAME
+        self.experiment_name = EXPERIMENT_NAME
 
     def get_data(self, features_name):
         '''
@@ -105,9 +110,34 @@ class Trainer():
         return self.evaluation
 
 
-    def save_model(reg):
-        """ method that saves the model into a .joblib file and uploads it on Google Storage /models folder """
-        pass
+    def save_model_locally(self):
+        """Save the model into a .joblib format"""
+        joblib.dump(self.pipeline, 'model.joblib')
+        print(colored("model.joblib saved locally", "green"))
+
+    # MLFlow methods
+    @memoized_property
+    def mlflow_client(self):
+        mlflow.set_tracking_uri(MLFLOW_URI)
+        return MlflowClient()
+
+    @memoized_property
+    def mlflow_experiment_id(self):
+        try:
+            return self.mlflow_client.create_experiment(self.experiment_name)
+        except BaseException:
+            return self.mlflow_client.get_experiment_by_name(
+                self.experiment_name).experiment_id
+
+    @memoized_property
+    def mlflow_run(self):
+        return self.mlflow_client.create_run(self.mlflow_experiment_id)
+
+    def mlflow_log_param(self, key, value):
+        self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
+
+    def mlflow_log_metric(self, key, value):
+        self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
     trainer = Trainer()
