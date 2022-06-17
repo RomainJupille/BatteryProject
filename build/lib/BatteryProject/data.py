@@ -17,7 +17,6 @@ def get_data_gcp(FEATURE_NAME,NROWS = None, RANGE_COL = None):
 
 def get_data_local(feature_name,nrows = None, range_col= None):
     dir_path = os.path.dirname(__file__)
-    print(dir_path)
     transformed_data_path = os.path.join(dir_path, "..", "..", "raw_data", "transformed_data", feature_name)
     transformed_data_path = os.path.normpath(transformed_data_path)
     df = pd.read_csv(transformed_data_path,nrows = nrows, usecols=range_col)
