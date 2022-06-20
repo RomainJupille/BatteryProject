@@ -76,11 +76,14 @@ class Trainer():
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
         gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy")
-        #self.mlflow_log_param("model", "Log")
+        model_name = str(self.pipeline["model"]).split('(', 1)[0]
+
         gs_results.fit(self.X_train, self.y_train)
 
         self.grid_search = gs_results
-
+        self.create_save_id_model()
+        self.save_model()
+        self.mlflow_log_param("model", model_name)
         return self
 
     def print_learning_curve(self):
@@ -108,7 +111,9 @@ class Trainer():
         'roc_auc' : roc_auc_score(prediction, self.y_test)
         }
         self.evaluation = dic
-        #self.mlflow_log_metric("metrics", dic)
+        self.mlflow_log_metric("accuracy", dic['accuracy'])
+        self.mlflow_log_metric("precision", dic['precision'])
+        self.mlflow_log_metric("roc_auc", dic['roc_auc'])
         return self.evaluation
 
     def create_save_id_model(self):
@@ -133,7 +138,7 @@ class Trainer():
 
     def save_model(self):
         """Save the model into a .joblib format"""
-        joblib.dump(self.grid_search.best_estimator_, f'Models/model_{self.ID}.joblib')
+        joblib.dump(self.grid_search.best_estimator_, f'BatteryProject/ModelOne/Models/model_{self.ID}.joblib')
         model_name = f"model_{self.ID}"
         EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] {model_name} + 1"
         self.experiment_name = EXPERIMENT_NAME
@@ -144,19 +149,20 @@ class Trainer():
     def mlflow_client(self):
         mlflow.set_tracking_uri(MLFLOW_URI)
         return MlflowClient()
+
+    @memoized_property
     def mlflow_experiment_id(self):
         try:
             return self.mlflow_client.create_experiment(self.experiment_name)
         except BaseException:
             return self.mlflow_client.get_experiment_by_name(
                 self.experiment_name).experiment_id
+
+    @memoized_property
     def mlflow_run(self):
         return self.mlflow_client.create_run(self.mlflow_experiment_id)
-
     def mlflow_log_param(self,key, value):
         self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
-
-
     def mlflow_log_metric(self,key, value):
         self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
