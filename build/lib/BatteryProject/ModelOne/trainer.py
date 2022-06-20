@@ -5,25 +5,27 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 import joblib
-from BatteryProject.params import *
 from termcolor import colored
 from mlflow.tracking import MlflowClient
 from memoized_property import memoized_property
 import mlflow
 import csv
 import os
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, roc_auc_score
+from sklearn.model_selection import learning_curve
 
 from BatteryProject.data import get_data_local, get_data_gcp
 from BatteryProject.ModelOne.get_features import get_features_target
-from BatteryProject.ModelOne.model_params import features
-from sklearn.model_selection import learning_curve
-import matplotlib.pyplot as plt
+from BatteryProject.ModelOne.model_params import features, models
+from BatteryProject.params import *
+
+
 
 
 class Trainer():
@@ -56,7 +58,7 @@ class Trainer():
 
         self.raw_data = df_dict
         self.X, self.y = get_features_target(self.raw_data, deep = self.deep, classes = self.classes)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.3)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.3, random_state = 0)
 
         return self
 
@@ -76,14 +78,13 @@ class Trainer():
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
         gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy")
-        model_name = str(self.pipeline["model"]).split('(', 1)[0]
+        self.scaler_name = str(self.pipeline["scaler"]).split('(', 1)[0]
+        self.model_name = str(self.pipeline["model"]).split('(', 1)[0]
 
         gs_results.fit(self.X_train, self.y_train)
 
         self.grid_search = gs_results
-        self.create_save_id_model()
-        self.save_model()
-        self.mlflow_log_param("model", model_name)
+
         return self
 
     def print_learning_curve(self):
@@ -106,14 +107,11 @@ class Trainer():
     def eval(self):
         prediction = self.grid_search.best_estimator_.predict(self.X_test)
         dic = {
-            'accuracy' : accuracy_score(prediction, self.y_test),
+        'accuracy' : accuracy_score(prediction, self.y_test),
         'precision' : precision_score(prediction, self.y_test),
         'roc_auc' : roc_auc_score(prediction, self.y_test)
         }
         self.evaluation = dic
-        self.mlflow_log_metric("accuracy", dic['accuracy'])
-        self.mlflow_log_metric("precision", dic['precision'])
-        self.mlflow_log_metric("roc_auc", dic['roc_auc'])
         return self.evaluation
 
     def create_save_id_model(self):
@@ -138,10 +136,35 @@ class Trainer():
 
     def save_model(self):
         """Save the model into a .joblib format"""
+
+        #get the ID
+        self.create_save_id_model()
+
+        #Save in MLFlow
+        EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] Battery_ModelOne + 1"
+        self.experiment_name = EXPERIMENT_NAME
+        self.mlflow_log_param("ID", self.ID)
+
+        self.mlflow_log_param("model", self.model_name)
+        self.mlflow_log_param("scaler", self.scaler_name)
+        self.mlflow_log_param("features", list(self.features_name.keys()))
+        self.mlflow_log_param("best param", self.grid_search.best_params_)
+
+
+
+        self.mlflow_log_metric("accuracy", self.evaluation['accuracy'])
+        self.mlflow_log_metric("precision", self.evaluation['precision'])
+        self.mlflow_log_metric("roc_auc", self.evaluation['roc_auc'])
+
+
+
+        # save the model.joblib (locally)
         joblib.dump(self.grid_search.best_estimator_, f'BatteryProject/ModelOne/Models/model_{self.ID}.joblib')
         model_name = f"model_{self.ID}"
-        EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] {model_name} + 1"
-        self.experiment_name = EXPERIMENT_NAME
+
+
+
+
         return self.experiment_name
 
     # MLFlow methods
@@ -163,10 +186,19 @@ class Trainer():
         return self.mlflow_client.create_run(self.mlflow_experiment_id)
     def mlflow_log_param(self,key, value):
         self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
+    def mlflow_log_params(self, dict_params):
+        self.mlflow_client.log_params(self.mlflow_run.info.run_id, dict_params)
     def mlflow_log_metric(self,key, value):
         self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
+    feat = features['feature_one']
+    mod = models['log'][0]
+    grid = models['log'][1]
     trainer = Trainer()
-    trainer.create_save_id_model()
+    trainer.features = feat
+    trainer.get_data(feat)
+    trainer.set_pipeline(model = mod)
+    trainer.run(grid)
+    trainer.eval()
     trainer.save_model()
