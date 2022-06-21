@@ -14,6 +14,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
+from xgboost import train
 
 from BatteryProject.data import get_data_local
 from BatteryProject.params import MLFLOW_URI
@@ -286,16 +287,29 @@ if __name__ == '__main__':
         for val in deeps_offset:
             deep = val['deep']
             offset = val['offset']
+            trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
+            trainer_data.get_data()
+            trainer_data.scaling()
+            trainer_data.get_baseline()
+
             for unit_type in unit_types:
                 for n_unit in n_units:
                     for n_layer in n_layers:
                         for drop in dropout:
                             for drop_layer in dropout_layer:
                                 t = Trainer(features_name = feat, deep = deep, offset = offset)
-                                t.get_data()
-                                t.scaling()
-                                t.get_baseline()
+                                t.raw_data = trainer_data.raw_data
+                                t.X_train = trainer_data.X_train
+                                t.X_test = trainer_data.X_test
+                                t.X_val = trainer_data.X_val
+                                t.X_train_scaled = trainer_data.X_train_scaled
+                                t.X_test_scaled = trainer_data.X_test_scaled
+                                t.X_val_scaled = trainer_data.X_val_scaled
+                                t.y_train = trainer_data.y_train
+                                t.y_test = trainer_data.y_test
+                                t.y_val = trainer_data.y_val
+                                t.baseline = trainer_data.baseline
                                 t.set_pipeline(unit_type = unit_type, n_layer=n_layer, n_unit = n_unit, dropout = drop, dropout_layer= drop_layer)
-                                t.run(epochs = 2)
+                                t.run(epochs = 500)
                                 t.eval()
                                 t.save_model()
