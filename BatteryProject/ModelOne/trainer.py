@@ -38,10 +38,12 @@ class Trainer():
         self.features_name = features_name
         self.deep = deep
         self.classes = classes
+
         if len(classes) > 1 :
             self.binary = False
         else :
             self.binary = TRUE
+
         self.target_name = 'disc_capa'
         self.grid_params = grid_params
 
@@ -128,7 +130,7 @@ class Trainer():
         with open(dir_path, "a") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow([new_id.tolist()])
-        if new_id < 9:
+        if new_id <= 9:
             self.ID = f"000{new_id}"
         elif new_id < 99:
             self.ID = f"00{new_id}"
