@@ -13,8 +13,7 @@ def get_features_target(df_dict, deep, classes):
     Return a df encoded of len(classes) + 1 classes
     Classes must be a list of int
     '''
-    #transform dataframe to drop columns with nan
-
+    #Drop lines with nan in the first columns(deep)
     i = 0
     for key, values in df_dict.items():
         if i == 0:
@@ -26,6 +25,7 @@ def get_features_target(df_dict, deep, classes):
     for key, values in df_dict.items():
         df_dict[key] = df_dict[key][filter == 0]
 
+    #Define the target
     target = df_dict['disc_capa'].iloc[:,classes[0]].isna() * (-1)
     n = len(classes)
     if n > 1:
@@ -33,6 +33,7 @@ def get_features_target(df_dict, deep, classes):
             target = target + df_dict['disc_capa'].iloc[:,classes[i]].isna() * (-1)
     target = target + n
 
+    #Define the X vector for all the features selected
     features = pd.DataFrame()
     check = pd.DataFrame()
     for key, values in df_dict.items():
