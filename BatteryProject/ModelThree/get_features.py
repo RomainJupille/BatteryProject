@@ -21,6 +21,6 @@ def get_features_target(df_dict, deep, offset,indexes):
 
             y.append(3000 - (offset*j + deep + nb_nan))
 
-    y = np.array(y)
+    y = np.array(y).astype('float32')
 
     return X, y

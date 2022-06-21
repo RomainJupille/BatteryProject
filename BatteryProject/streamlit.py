@@ -9,10 +9,9 @@ col1, col2 = st.columns(2)
 col1.write("Le monde fait face à une augmentation exponentielle des ventes de batteries")
 col2.write("Graphic : coming soon")
 
-st.write('')
-st.write('')
-st.write('')
-st.write('')
+st.markdown('# ')
+st.markdown('# ')
+
 st.warning('La durée de vie des équipements est un enjeu majeur pour les utilisateurs et les fabricants')
 col1, col2, col3 = st.columns(3)
 col1.write("Enjeu environmental")
