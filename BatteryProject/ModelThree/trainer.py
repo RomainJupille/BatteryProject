@@ -1,5 +1,6 @@
 from telnetlib import SE
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from tensorflow.keras.models import Sequential
@@ -34,8 +35,8 @@ class Trainer():
             df_dict[name] = df
 
         self.raw_data = df_dict
-        self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2)
-        self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25)
+        self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2, random_state=0)
+        self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25, random_state=0)
         self.X_train, self.y_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
         self.X_val, self.y_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
         self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
@@ -43,8 +44,8 @@ class Trainer():
         return self
 
     def scaling(self):
-        self.mean_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features)
-        self.std_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features)
+        self.mean_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features +1)
+        self.std_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features  +1)
 
         self.X_train_scaled = (self.X_train - self.mean_scaler) / self.std_scaler
         self.X_val_scaled = (self.X_val - self.mean_scaler) / self.std_scaler
@@ -73,7 +74,7 @@ class Trainer():
         self.metrics = metrics
         self.optimizer = opt
         self.epochs = epochs
-        self.bacth_size = 32
+        self.bacth_size = batch_size
 
         es = EarlyStopping(patience = 10, restore_best_weights= True)
 
@@ -113,8 +114,9 @@ class Trainer():
 
 
     def eval(self):
-        '''To be done'''
-        pass
+        #res = root_mean_squared_error(np.array([1,2,3]), np.array([10,4,5]))
+        res = root_mean_squared_error(self.model.predict(self.X_test_scaled), self.y_test)
+        return res.numpy()
 
 
     def save_model(reg):
@@ -132,9 +134,10 @@ if __name__ == '__main__':
     trainer.set_pipeline()
     trainer.run()
 
-    print(trainer.X_train.shape)
-    print(trainer.y_train.shape)
-    print(trainer.X_test.shape)
-    print(trainer.y_test.shape)
-    print(np.isnan(trainer.X_train.shape).sum())
-    print(np.isnan(trainer.X_test.shape).sum())
+    '''
+    Params à faire varier
+    -> deep
+    -> offset
+    -> nb de layer
+
+    '''
