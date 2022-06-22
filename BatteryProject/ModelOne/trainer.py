@@ -65,7 +65,7 @@ class Trainer():
 
         self.raw_data = df_dict
         self.X, self.y = get_features_target(self.raw_data, deep = self.deep, classes = self.classes)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.3, random_state = 0)
+        self.X_train, self.X_test, self.y_train, self.y_test, self.raw_train, self.raw_test = train_test_split(self.X, self.y, self.raw_data[self.target_name], test_size = 0.3, random_state = 0)
 
         return self
 
@@ -171,8 +171,12 @@ class Trainer():
         joblib.dump(self.grid_search.best_estimator_, f'BatteryProject/ModelOne/Models/model_{self.ID}.joblib')
         model_name = f"model_{self.ID}"
 
-
         return self.experiment_name
+
+    def save_test_csv(self):
+        self.raw_test.to_csv("BatteryProject/ModelOne/test_data/raw_data_test_model_one.csv")
+        np.savetxt("BatteryProject/ModelOne/test_data/X_test_model_one.csv", self.X_test, delimiter=",")
+        np.savetxt("BatteryProject/ModelOne/test_data/y_test_model_one.csv", self.y_test, delimiter=",")
 
     # MLFlow methods
     @memoized_property
@@ -199,15 +203,19 @@ class Trainer():
         self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
-    for feat in features.values():
-        for param in models.values():
-            for scal in scalers.values():
-                mod = param[0]
-                grid = param[1]
-                trainer = Trainer()
-                trainer.features = feat
-                trainer.get_data(feat)
-                trainer.set_pipeline(scaler = scal, model = mod)
-                trainer.run(grid)
-                trainer.eval()
-                trainer.save_model()
+    trainer = Trainer()
+    feat = features['feature_four']
+    trainer.get_data(feat)
+    trainer.save_test_csv()
+
+    # for feat in features.values():
+    #     for param in models.values():
+    #         for scal in scalers.values():
+    #             mod = param[0]
+    #             grid = param[1]
+    #             trainer = Trainer()
+    #             trainer.get_data(feat)
+    #             trainer.set_pipeline(scaler = scal, model = mod)
+    #             trainer.run(grid)
+    #             trainer.eval()
+    #             trainer.save_model()
