@@ -165,8 +165,6 @@ class Trainer():
         self.mlflow_log_metric("precision", self.evaluation['precision'])
         self.mlflow_log_metric("roc_auc", self.evaluation['roc_auc'])
 
-
-
         # save the model.joblib (locally)
         joblib.dump(self.grid_search.best_estimator_, f'BatteryProject/ModelOne/Models/model_{self.ID}.joblib')
         model_name = f"model_{self.ID}"
