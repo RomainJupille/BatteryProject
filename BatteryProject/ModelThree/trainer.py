@@ -241,6 +241,7 @@ class Trainer():
         self.mlflow_log_param("offset", self.offset)
         self.mlflow_log_param("unit_type", self.unit_type)
         self.mlflow_log_param("n_units", self.n_units)
+        self.mlflow_log_param("n_layer", self.n_layer)
         self.mlflow_log_param("dropout_rate", self.dropout)
         self.mlflow_log_param("dropout_layer", self.dropout_layer)
 
