@@ -2,28 +2,34 @@
 
 import numpy as np
 import pandas as pd
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
-# for testing purposes
-def generate_fake_Xy(deep = 5):
-    features = [[1.068216, 6.191177, 29.922943, 1.441996]]
-    X = [features * deep]
-    X = np.array(X * 134)
-    y = np.random.randint(low=300, high=1500, size=134)
-    return X,y
+def get_features_target(df_dict, deep, offset,indexes):
+    X = None
+    y = []
+    n_features = len(df_dict)
+
+    for i in indexes:
+        nb_nan = df_dict['disc_capa'].iloc[i,:].isna().sum()
+        for j in range((3000 - nb_nan - deep)//offset):
+            sample = np.zeros((deep,n_features + 1))
+            for k, df in enumerate(df_dict.values()):
+                sample[:,k] = np.array(df.iloc[i,1+offset * j:1+offset*j + deep])
+            # ajoute une feature (l'offset)
+            sample[:,n_features] = np.arange(offset * j, offset*j + deep)
+            if X is None:
+                X = sample.reshape(1,deep,n_features +1)
+            else:
+                X = np.concatenate([X,sample.reshape(1,deep,n_features +1)], axis = 0)
+
+            y.append(3000 - (offset*j + deep + nb_nan))
+
+    y = np.array(y)
+
+    return X, y
 
 
-def get_features_target(df_dict, offset, deep, classes):
-    '''
-    Get the features and target form the dataframes in the dict
-    df_dict must be given as a dict of dataframe
-    keys of df_dict are used to define the titles
-    deep defines how many columns are put inside the feature
-    (each cols being a chare/discharge cycle)
-    '''
-    #transform dataframe to drop columns with nan
-
+"""def get_features_target_old(df_dict, offset, deep, idx):
     i = 0
     for key, values in df_dict.items():
         if i == 0:
@@ -41,7 +47,7 @@ def get_features_target(df_dict, offset, deep, classes):
     for cap in df_dict['disc_capa'].iloc:
         distance_to_end = len(cap[:].dropna()) - (offset + deep)
         target.append(distance_to_end)
-    target = pd.Series(target)
+    target = np.array(target)
 
     # generation features dans une windows (offset + deep)
     features = pd.DataFrame()
@@ -60,4 +66,4 @@ def get_features_target(df_dict, offset, deep, classes):
         np_features.append(dim)
     np_features = np.array(np_features)
 
-    return np_features, target
+    return np_features, target"""

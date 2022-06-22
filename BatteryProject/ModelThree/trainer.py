@@ -258,7 +258,7 @@ class Trainer():
 
         return self
 
-# MLFlow methods
+    # MLFlow methods
     @memoized_property
     def mlflow_client(self):
         mlflow.set_tracking_uri(MLFLOW_URI)

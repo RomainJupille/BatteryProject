@@ -77,3 +77,18 @@ upload_data:
 
 streamlit:
 	-@streamlit run BatteryProject/streamlit.py
+
+
+# ----------------------------------
+#      FAST API
+# ----------------------------------
+run_api:
+	uvicorn api.fast:app --reload  # load web server with code autoreload
+
+
+##### Package params  - - - - - - - - - - - - - - - - - - -
+PACKAGE_NAME=BatteryProject
+FILENAME=trainer
+
+run_locally:
+	@python -m ${PACKAGE_NAME}.${FILENAME}
