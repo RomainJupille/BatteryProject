@@ -259,6 +259,12 @@ class Trainer():
 
         return self
 
+    def save_test_csv(self):
+        self.raw_data['disc_capa'].iloc[self.test_index,:].to_csv("BatteryProject/ModelThree/test_data/raw_data_test_model_three.csv")
+        np.savetxt("BatteryProject/ModelThree/test_data/X_test_model_three.csv", self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
+        np.savetxt("BatteryProject/ModelThree/test_data/X_test_scaled_model_three.csv", self.X_test_scaled.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
+        np.savetxt("BatteryProject/ModelThree/test_data/y_test_model_three.csv", self.y_test, delimiter=",")
+
     # MLFlow methods
     @memoized_property
     def mlflow_client(self):
@@ -284,33 +290,42 @@ class Trainer():
         self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
 
 if __name__ == '__main__':
-    for feat in features:
-        for val in deeps_offset:
-            deep = val['deep']
-            offset = val['offset']
-            trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
-            trainer_data.get_data()
-            trainer_data.scaling()
-            trainer_data.get_baseline()
+    feat = features[0]
+    deep = deeps_offset[0]['deep']
+    offset = deeps_offset[0]['offset']
+    trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
+    trainer_data.get_data()
+    trainer_data.scaling()
+    trainer_data.save_test_csv()
 
-            for unit_type in unit_types:
-                for n_unit in n_units:
-                    for n_layer in n_layers:
-                        for drop in dropout:
-                            for drop_layer in dropout_layer:
-                                t = Trainer(features_name = feat, deep = deep, offset = offset)
-                                t.raw_data = trainer_data.raw_data
-                                t.X_train = trainer_data.X_train
-                                t.X_test = trainer_data.X_test
-                                t.X_val = trainer_data.X_val
-                                t.X_train_scaled = trainer_data.X_train_scaled
-                                t.X_test_scaled = trainer_data.X_test_scaled
-                                t.X_val_scaled = trainer_data.X_val_scaled
-                                t.y_train = trainer_data.y_train
-                                t.y_test = trainer_data.y_test
-                                t.y_val = trainer_data.y_val
-                                t.baseline = trainer_data.baseline
-                                t.set_pipeline(unit_type = unit_type, n_layer=n_layer, n_unit = n_unit, dropout = drop, dropout_layer= drop_layer)
-                                t.run(epochs = 500)
-                                t.eval()
-                                t.save_model()
+
+    # for feat in features:
+    #     for val in deeps_offset:
+    #         deep = val['deep']
+    #         offset = val['offset']
+    #         trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
+    #         trainer_data.get_data()
+    #         trainer_data.scaling()
+    #         trainer_data.get_baseline()
+
+    #         for unit_type in unit_types:
+    #             for n_unit in n_units:
+    #                 for n_layer in n_layers:
+    #                     for drop in dropout:
+    #                         for drop_layer in dropout_layer:
+    #                             t = Trainer(features_name = feat, deep = deep, offset = offset)
+    #                             t.raw_data = trainer_data.raw_data
+    #                             t.X_train = trainer_data.X_train
+    #                             t.X_test = trainer_data.X_test
+    #                             t.X_val = trainer_data.X_val
+    #                             t.X_train_scaled = trainer_data.X_train_scaled
+    #                             t.X_test_scaled = trainer_data.X_test_scaled
+    #                             t.X_val_scaled = trainer_data.X_val_scaled
+    #                             t.y_train = trainer_data.y_train
+    #                             t.y_test = trainer_data.y_test
+    #                             t.y_val = trainer_data.y_val
+    #                             t.baseline = trainer_data.baseline
+    #                             t.set_pipeline(unit_type = unit_type, n_layer=n_layer, n_unit = n_unit, dropout = drop, dropout_layer= drop_layer)
+    #                             t.run(epochs = 500)
+    #                             t.eval()
+    #                             t.save_model()
