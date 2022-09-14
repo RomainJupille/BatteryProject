@@ -46,9 +46,9 @@ class Trainer():
         self.raw_data = df_dict
         self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2, random_state=1)
         self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25, random_state=1)
-        self.X_train, self.y_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
-        self.X_val, self.y_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
-        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
+        self.X_train, self.y_train, self.bc_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
+        self.X_val, self.y_val, self.bc_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
+        self.X_test, self.y_test, self.bc_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
 
         return self
 
@@ -264,6 +264,7 @@ class Trainer():
         np.savetxt("BatteryProject/ModelThree/test_data/X_test_model_three.csv", self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
         np.savetxt("BatteryProject/ModelThree/test_data/X_test_scaled_model_three.csv", self.X_test_scaled.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
         np.savetxt("BatteryProject/ModelThree/test_data/y_test_model_three.csv", self.y_test, delimiter=",")
+        np.savetxt("BatteryProject/ModelThree/test_data/bc_test_model_three.csv", self.bc_test, delimiter=",", fmt="%s")
 
     # MLFlow methods
     @memoized_property

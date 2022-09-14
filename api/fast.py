@@ -43,7 +43,7 @@ def index():
 @app.get("/predict1")
 def predict(n_features, deep, X_val_serialized):
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    model = joblib.load(os.path.join(dir_path, "..", "model1.joblib"))
+    model = joblib.load(os.path.normpath(os.path.join(dir_path, "..", "model1.joblib")))
 
     response = {
         "predict": 0,

@@ -6,6 +6,7 @@ def get_features_target(df_dict, deep, offset,indexes):
 
     X = None
     y = []
+    barcode = []
     n_features = len(df_dict)
     for i in indexes:
         nb_nan = df_dict['disc_capa'].iloc[i,:].isna().sum()
@@ -20,7 +21,9 @@ def get_features_target(df_dict, deep, offset,indexes):
                 X = np.concatenate([X,sample.reshape(1,deep,n_features +1)], axis = 0)
 
             y.append(3000 - (offset*j + deep + nb_nan))
+            barcode.append(df.iloc[i,0])
 
+    barcode = np.array(barcode)
     y = np.array(y).astype('float32')
 
-    return X, y
+    return X, y, barcode
