@@ -12,7 +12,7 @@ def initialize_files(df, path, file_name = 'test_details.csv', details=True, sum
         with open(file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=tp.one_val_cols_list)
             writer.writeheader()
-        print(f"{file_name} created")
+        print(f"{file_name} initialized")
 
     if summary:
         print("initializing summary files")
@@ -44,8 +44,6 @@ def valide_shape(df,indexes,cols,one_val_cols,NaN_cols):
         assert(len(set(df[col].values))== 1)
     for col in NaN_cols:
         assert(df[col].isna().sum()== 21)
-
-    print('file shape is valid')
 
 def add_lines_details(df,path, file_name = 'test_details.csv'):
     '''add a line on the csv file_details for each data file and save the barcodes / file names relations'''
@@ -149,7 +147,7 @@ def transform_data(initial_data_folder_name,
                    transformed_data_folder_name,
                    details,
                    summary,
-                   cylces,
+                   cycles,
                     barcode_to_drop):
     '''
     This method transform raw data from the paper (several JSON files, with one JSON corresponding to one battery)
@@ -185,7 +183,7 @@ def transform_data(initial_data_folder_name,
 
     #initialization of the csv files in the output folder, based on columns and indexes of the 1st file
     #options
-    initialize_files(df, transformed_data_path, details=details, summary=summary, cycles=cylces )
+    initialize_files(df, transformed_data_path, details=details, summary=summary, cycles=cycles )
 
 
     '''
@@ -211,7 +209,7 @@ def transform_data(initial_data_folder_name,
         #check if the data has to be dropped (some samples had issues during data acquisition)
         if bc.upper() in barcode_to_drop:
             file_droped += 1
-            print(f"{bc} has been dropped")
+            print(f"{bc} has been dropped, a total of {file_droped} has been dropped until now")
 
         #if not add the file into the dict of bc (check for duplicated barcode)
         #One barcode can be linked to 1 or 2 files (some battery measurement extended over 2 periods)
@@ -219,6 +217,7 @@ def transform_data(initial_data_folder_name,
             if bc in files_dict.keys():
                 files_dict[bc].append(file_name)
                 file_concat += 1
+                print(f"{files_dict[bc][1]} has been concatenated with {files_dict[bc][0]}")
             else:
                 files_dict[bc] = [file_name]
                 add_lines_details(df,transformed_data_path)
@@ -230,8 +229,8 @@ def transform_data(initial_data_folder_name,
     clean_test_details(transformed_data_path)
 
     print('All files have been checked and the test_details file has been created')
-    print(f"{file_droped} files droped")
-    print(f"{file_concat} files concatenated")
+    print(f"{file_droped} files droped in total")
+    print(f"{file_concat} files concatenated in total")
 
 
     i=0
@@ -242,7 +241,12 @@ def transform_data(initial_data_folder_name,
         print(f"Barcodes{i} read and the data has been added to the csv files")
         i+=1
 
-    print(f"{i} lines created")
+    print(f"{i} lines of data created in total in the csv files")
 
 if __name__ == '__main__':
-    transform_data(tp.initial_data_folder_name, tp.transformed_data_folder_name, tp.get_details, tp.get_summary, get_cycles_interpolated, bc_to_drop)
+    transform_data(tp.initial_data_folder_name,
+                   tp.transformed_data_folder_name,
+                   tp.get_details,
+                   tp.get_summary,
+                   tp.get_cycles_interpolated,
+                   tp.bc_to_drop)
