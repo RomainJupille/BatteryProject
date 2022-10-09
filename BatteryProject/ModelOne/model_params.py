@@ -34,11 +34,10 @@ features = {
         }
 }
 
-scalers = {
+model_scalers = {
         "RobustScaler" : RobustScaler(),
         "StandardScaler" : StandardScaler(),
-        "MinMaxScaler" : MinMaxScaler()
-        }
+        "MinMaxScaler" : MinMaxScaler()}
 
 models = {
     'log' : [

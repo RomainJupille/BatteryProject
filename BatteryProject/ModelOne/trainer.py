@@ -1,39 +1,47 @@
-from email.errors import NoBoundaryInMultipartDefect
 from pickle import TRUE
-from pyexpat import model
-from google.cloud import storage
 import numpy as np
 import pandas as pd
-from sklearn import metrics
 import joblib
-from termcolor import colored
-from mlflow.tracking import MlflowClient
+#from mlflow.tracking import MlflowClient
 from memoized_property import memoized_property
-import mlflow
+#import mlflow
 import csv
 import os
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, roc_auc_score
 from sklearn.model_selection import learning_curve
 
-from BatteryProject.data import get_data_local, get_data_gcp
+from BatteryProject.data import get_data_local
 from BatteryProject.ModelOne.get_features import get_features_target
-from BatteryProject.ModelOne.model_params import features, models, scalers
-from BatteryProject.params import *
+from BatteryProject.ModelOne.model_params import features, models, model_scalers
+# from BatteryProject.params import *
 
 
+"""
+The 'Model One' consist in predicting whether a battery will support more than a given number of cycles
+
+It can be a binary classification (with only one value, the used value is 550 cycles)
+
+It can also be used to differenciate several classes
+"""
 
 
 class Trainer():
+    """
+    Trainer is a class containing all the information for traning and optimize a model
+    One trainer instance has given classes and given features
+    """
 
     def __init__(self, features_name = None, deep = 5, classes = [550], grid_params ={} ):
         """
-            features : list of features (in the shape of a dictionnary)
+        Deep : number of cycle used for prediction
+        Classes : [int, ...]. list of treshold used to create the different target classes of the model
+        features : list of features (in the shape of a dictionnary)
         """
         self.features_name = features_name
         self.deep = deep
@@ -59,11 +67,14 @@ class Trainer():
         self.features_name = features_name
 
         df_dict = {}
+
+        #Get the data
         for name, path in self.features_name.items():
             df = get_data_local(path)
             df_dict[name] = df
 
         self.raw_data = df_dict
+
         self.X, self.y = get_features_target(self.raw_data, deep = self.deep, classes = self.classes)
         self.X_train, self.X_test, self.y_train, self.y_test, self.raw_train, self.raw_test = train_test_split(self.X, self.y, self.raw_data[self.target_name], test_size = 0.3, random_state = 0)
 
@@ -121,15 +132,40 @@ class Trainer():
         self.evaluation = dic
         return self.evaluation
 
-    def create_save_id_model(self):
+    def save_model(self):
         dir_path = os.path.join(os.path.dirname(__file__),'Models','IDs.csv')
-        df_ids = pd.read_csv(dir_path)
-        last_id = df_ids.values.max()
-        new_id = last_id + 1
+        df_records = pd.read_csv(dir_path)
+        try:
+            df_records = df_records.drop(columns='Unnamed: 0')
+        except:
+            pass
 
-        with open(dir_path, "a") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([new_id.tolist()])
+        if df_records.shape[0] == 0:
+            new_id=1
+        else:
+            last_id = df_records['Try_ID'].values.max()
+            new_id = last_id + 1
+
+        data = pd.DataFrame()
+        data['Try_ID'] = new_id
+        data['Model'] = self.model_name
+        data['Scaler'] = self.scaler_name
+        data['Feature_list'] = list(self.features_name.keys())
+        for key, value in self.evaluation.items():
+            data[f"metrics_{key}"] = value
+        for key, values in self.grid_search.best_params_.items():
+            data[f"HyperParams_{key.split('__')[1]}"] = values
+
+        df_records = df_records.append(data, ignore_index=True)
+        col_list = df_records.columns
+        col_l1 = ['Try_ID',  'Model', 'Scaler', 'Feature_list']
+        col_l2 = [a for a in col_list if a[0:7] == 'metrics']
+        col_l3 = [a for a in col_list if a[0:11] == 'HyperParams']
+        new_col_list = col_l1 + col_l2 + col_l3
+        df_ids = df_ids[new_col_list]
+
+        df_records.to_csv(dir_path)
+
         if new_id <= 9:
             self.ID = f"000{new_id}"
         elif new_id < 99:
@@ -138,82 +174,42 @@ class Trainer():
             self.ID = f"0{new_id}"
         else:
             self.ID = f"{new_id}"
-        return self.ID
 
-
-    def save_model(self):
-        """Save the model into a .joblib format"""
-
-        #get the ID
-        self.create_save_id_model()
-
-        #Save in MLFlow
-        EXPERIMENT_NAME = f"[FR] [Marseille] [TomG13100] Battery_ModelOne + 1"
-        self.experiment_name = EXPERIMENT_NAME
-        self.mlflow_log_param("ID", self.ID)
-
-        self.mlflow_log_param("model", self.model_name)
-        self.mlflow_log_param("scaler", self.scaler_name)
-
-        for feature in list(self.features_name.keys()):
-            self.mlflow_log_param(feature, 1)
-
-        for key, values in self.grid_search.best_params_.items():
-            self.mlflow_log_param(key.split('__')[1], values)
-
-        self.mlflow_log_metric("accuracy", self.evaluation['accuracy'])
-        self.mlflow_log_metric("precision", self.evaluation['precision'])
-        self.mlflow_log_metric("roc_auc", self.evaluation['roc_auc'])
-
-        # save the model.joblib (locally)
-        joblib.dump(self.grid_search.best_estimator_, f'BatteryProject/ModelOne/Models/model_{self.ID}.joblib')
-        model_name = f"model_{self.ID}"
-
-        return self.experiment_name
+        model_path = os.path.join(os.path.dirname(__file__),'Models', f"model_{self.ID}.joblib")
+        joblib.dump(self.grid_search.best_estimator_, model_path)
 
     def save_test_csv(self):
         self.raw_test.to_csv("BatteryProject/ModelOne/test_data/raw_data_test_model_one.csv")
         np.savetxt("BatteryProject/ModelOne/test_data/X_test_model_one.csv", self.X_test, delimiter=",")
         np.savetxt("BatteryProject/ModelOne/test_data/y_test_model_one.csv", self.y_test, delimiter=",")
 
-    # MLFlow methods
-    @memoized_property
-    def mlflow_client(self):
-        mlflow.set_tracking_uri(MLFLOW_URI)
-        return MlflowClient()
-
-    @memoized_property
-    def mlflow_experiment_id(self):
-        try:
-            return self.mlflow_client.create_experiment(self.experiment_name)
-        except BaseException:
-            return self.mlflow_client.get_experiment_by_name(
-                self.experiment_name).experiment_id
-
-    @memoized_property
-    def mlflow_run(self):
-        return self.mlflow_client.create_run(self.mlflow_experiment_id)
-    def mlflow_log_param(self,key, value):
-        self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
-    def mlflow_log_params(self, dict_params):
-        self.mlflow_client.log_params(self.mlflow_run.info.run_id, dict_params)
-    def mlflow_log_metric(self,key, value):
-        self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
-
 if __name__ == '__main__':
-    trainer = Trainer()
-    feat = features['feature_four']
-    trainer.get_data(feat)
-    trainer.save_test_csv()
+    #trainer = Trainer()
+    #feat = features['feature_four']
+    #trainer.get_data(feat)
+    #trainer.save_test_csv()
 
-    # for feat in features.values():
-    #     for param in models.values():
-    #         for scal in scalers.values():
-    #             mod = param[0]
-    #             grid = param[1]
-    #             trainer = Trainer()
-    #             trainer.get_data(feat)
-    #             trainer.set_pipeline(scaler = scal, model = mod)
-    #             trainer.run(grid)
-    #             trainer.eval()
-    #             trainer.save_model()
+    n_feat = len(features.values())
+    n_param = len(models.values())
+    n_scalers = len(model_scalers.values())
+    print(f"Testing {n_feat * n_param * n_scalers} combinations")
+    i = 1
+    for feat in features.values():
+       for param in models.values():
+           for scal in model_scalers.values():
+              mod = param[0]
+              grid = param[1]
+              trainer = Trainer()
+              trainer.get_data(feat)
+              trainer.set_pipeline(scaler = scal, model = mod)
+              trainer.run(grid)
+              trainer.eval()
+              trainer.save_model()
+
+              print(f"==== {i} combination ====")
+              print(feat)
+              print(trainer.grid_search.best_estimator_)
+              print(trainer.evaluation)
+              print('\n')
+
+              i+= 1
