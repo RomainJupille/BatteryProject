@@ -27,22 +27,22 @@ features = [
     ]
 
 deeps_offset = [
-    # {
-    #     'deep' : 10,
-    #     'offset' : 15
-    # },
-    # {
-    #     'deep' : 20,
-    #     'offset' : 20
-    # },
+        # {
+        #     'deep' : 10,
+        #     'offset' : 15
+        # },
+        # {
+        #     'deep' : 20,
+        #     'offset' : 20
+        # },
     {
         'deep' : 40,
         'offset' : 40
     }
 ]
 
-unit_types = ['LSTM']
-n_layers = [2,3]
-n_units = [4,5]
+unit_types = ['LSTM', 'GRU']
+n_layers = [2]
+n_units = [2]
 dropout = [0.3]
 dropout_layer = [True]

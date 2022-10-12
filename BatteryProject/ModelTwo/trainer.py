@@ -1,165 +1,157 @@
-
-import joblib
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
 import csv
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+import joblib
 from timeit import default_timer as timer
 
-from sklearn.model_selection import train_test_split
-from tensorflow.keras import models, layers, optimizers, callbacks
-from sklearn.model_selection import train_test_split, learning_curve
 
-from memoized_property import memoized_property
 from tensorflow.keras.metrics import RootMeanSquaredError
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.model_selection import train_test_split
+
 from BatteryProject.data import get_data_local
 from BatteryProject.ModelTwo.get_features import get_features_target
-from BatteryProject.ModelTwo.scaler import CustomStandardScaler
 from BatteryProject.ModelTwo.loss import root_mean_squared_error
-
-
-
-from BatteryProject.params import MLFLOW_URI
-import mlflow
+from BatteryProject.ModelTwo.model_params import *
 
 
 class Trainer():
 
-    def __init__(self, features_name = None, deep = 20, offset = 15):
+    def __init__(self, features_name = None, deep = 30, offset = 20):
+        #list of the features used in the network
         self.features_name = features_name
         self.n_features = len(features_name)
+
+        #lenght of the data used to train the model
         self.deep = deep
+
+        #distance between 2 set of data
         self.offset = offset
         self.target_name = 'disc_capa'
 
-
     def get_data(self):
-        '''To be done'''
+        '''
+        Class method that splits the dataset into training, validation and test sets
+        The method then extract X's, y's and barcode's sets using the get_features_target method
+        '''
         df_dict = {}
+        #get all the raw data corresponding to feature names
         for name, path in self.features_name.items():
             df = get_data_local(path)
             df_dict[name] = df
 
         self.raw_data = df_dict
 
-        index_array = np.arange(df_dict['disc_capa'].shape[0]) # [0, ... 134]
+        #spliting the data indexes into 3 sub-sets
+        self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2, random_state=1)
+        self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25, random_state=1)
 
-        self.train_index, self.test_index = train_test_split(index_array , test_size = 0.2, random_state=0)
-        self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25, random_state=0)
-
-        self.X_train, self.y_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
-        self.X_val, self.y_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
-        self.X_test, self.y_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
-        #self.X, self.y = get_features_target(self.raw_data, offset = self.offset, deep = self.deep)
-        #self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size = 0.3)
+        #get the data and store them into class variables
+        self.X_train, self.y_train, self.bc_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
+        self.X_val, self.y_val, self.bc_val = get_features_target(self.raw_data, self.deep, self.offset, self.val_index)
+        self.X_test, self.y_test, self.bc_test = get_features_target(self.raw_data, self.deep, self.offset, self.test_index)
 
         return self
 
     def get_baseline(self):
+        '''
+        Definition of a score baseline.
+        For a given dataset, the baseline model predicts the remaining number of life-cycles as the mean of remaining cycles
+           for all batteries that reach the current state of the dataset.
+        The score used for the baseline is the root_mean_squared error.
+        '''
+        #get the target data (only using train set)
         df = self.raw_data['disc_capa'].iloc[self.train_index,:].copy()
         results = pd.DataFrame()
+
+        #every 50 cycles, measure the mean of remaining cycles for batteries that reach this number of cycles
         for i in range(0,3000,50):
             val = (3000 - i) - df[df.iloc[:,i].isna() == False].isna().sum(axis=1).mean()
             results[i] = [val]
-
         results = results.T.reset_index()
         results.columns = ['range', 'mean']
         results.fillna(0, inplace= True)
 
+        #get the last 'disc capa' measure from all X_test samples
         test = self.X_test[:,self.deep-1,self.n_features]
         prediction = []
         for i in range(test.shape[0]):
+            #get the index of the measurement
             index = test[i]
-            pred = (results['range'] - index).abs().argsort()[0]
-            pred = results.iloc[pred,1]
+
+            #get the closest index
+            pred_index = (results['range'] - index).abs().argsort()[0]
+            #get the prediction from the baseline model based on the index
+            pred = results.iloc[pred_index,1]
             prediction.append(pred)
 
         self.prediction = prediction
 
-        baseline = root_mean_squared_error(self.y_test, prediction)
+        #measure baseline
+        baseline = root_mean_squared_error(self.y_test, self.prediction)
         self.baseline = baseline
 
         return self
 
-
-
-    def initialize_model(self):
-        """ CNN1D model """
-        model = models.Sequential()
-
-        # layer de convolution avec x filtres
-        model.add(layers.Conv1D(32,
-                                kernel_size=4,
-                                strides=1,
-                                padding='same',
-                                activation="relu",
-                                input_shape=self.X_train.shape[1:]))
-        model.add(layers.MaxPool1D(pool_size=2))
-
-        model.add(layers.Conv1D(32,
-                                kernel_size=3,
-                                padding='same',
-                                activation="relu"))
-        model.add(layers.MaxPool1D(pool_size=2))
-
-        model.add(layers.Flatten())
-        model.add(layers.Dense(100, activation='relu')) # intermediate layer
-        model.add(layers.Dense(1, activation='linear'))
-
-        model.compile(loss='mse',
-                      optimizer=optimizers.Adam(learning_rate = 0.001),
-                      metrics=['mse'], # 'mae', mse', 'rmse', 'rmsle'
-                      )
-
-        self.model = model
-        return model
-
-
-    def scaling(self, scaler = CustomStandardScaler()):
-        """self.mean_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features +1)
+    def scaling(self):
+        '''
+        Scaling of X's sets
+        The scaler is fit with X_train only
+        '''
+        self.mean_scaler = self.X_train.mean(axis=0).reshape(1,self.deep,self.n_features +1)
         self.std_scaler = self.X_train.std(axis=0).reshape(1,self.deep,self.n_features  +1)
+
         self.X_train_scaled = (self.X_train - self.mean_scaler) / self.std_scaler
         self.X_val_scaled = (self.X_val - self.mean_scaler) / self.std_scaler
-        self.X_test_scaled = (self.X_test - self.mean_scaler) / self.std_scaler"""
-
-        self.scaler = scaler
-        self.X_train_scaled = self.scaler.fit_transform(self.X_train)
-        self.X_val_scaled = self.scaler.transform(self.X_val)
-        self.X_test_scaled = self.scaler.transform(self.X_test)
-
-        print(self.X_train)
-        print(self.X_train_scaled)
+        self.X_test_scaled = (self.X_test - self.mean_scaler) / self.std_scaler
 
         return self
 
+    def set_pipeline(self, unit_type = 'LSTM', n_layer = 1, n_unit = 1, dropout = 0.0, dropout_layer = True):
+        '''
+        Definition of the RNN model
+        '''
+        self.unit_type = unit_type
+        self.n_layer = n_layer
+        self.n_units = n_unit
+        self.dropout = dropout
+        self.dropout_layer = dropout_layer
 
-    def set_pipeline(self):
-        model = models.Sequential()
+        params ={
+            'units' : n_unit,
+            'activation' : 'tanh',
+            'dropout' : dropout
+            }
 
-        # layer de convolution avec x filtres
-        model.add(layers.Conv1D(32,
-                                kernel_size=4,
-                                strides=1,
-                                padding='same',
-                                activation="relu",
-                                input_shape=self.X_train.shape[1:]))
-        model.add(layers.MaxPool1D(pool_size=2))
+        model = Sequential()
 
-        model.add(layers.Conv1D(32,
-                                kernel_size=3,
-                                padding='same',
-                                activation="relu"))
-        model.add(layers.MaxPool1D(pool_size=2))
+        if unit_type == 'LSTM':
+            if n_layer == 1:
+                model.add(LSTM(**params))
+            if n_layer > 1:
+                for i in range(n_layer - 1):
+                    model.add(LSTM(**params, return_sequences = True))
+                model.add(LSTM(**params))
+        elif unit_type == 'GRU':
+            if n_layer == 1:
+                model.add(GRU(**params))
+            if n_layer > 1:
+                for i in range(n_layer - 1):
+                    model.add(GRU(**params, return_sequences = True))
+                model.add(GRU(**params))
 
-        model.add(layers.Flatten())
-        model.add(layers.Dense(100, activation='relu')) # intermediate layer
-        model.add(layers.Dense(1, activation='linear'))
+
+        model.add(Dense(20, activation = 'relu'))
+        if dropout_layer == True:
+            model.add(Dropout(0.2))
+        model.add(Dense(1, activation = 'linear' ))
 
         self.model = model
         return self
-
 
     def run(self,
             opt = 'rmsprop',
@@ -167,8 +159,11 @@ class Trainer():
             metrics = [RootMeanSquaredError()],
             epochs = 500,
             batch_size = 32):
-
+        '''
+        Compile and fit the RNN model
+        '''
         starttime = timer()
+
 
         self.optimizer = opt
         self.loss = loss
@@ -177,7 +172,7 @@ class Trainer():
         self.epochs = epochs
         self.bacth_size = batch_size
 
-        es = callbacks.EarlyStopping(patience = 10, restore_best_weights= True)
+        es = EarlyStopping(patience = 10, restore_best_weights= True)
 
         self.model.compile(
             self.optimizer,
@@ -196,86 +191,6 @@ class Trainer():
 
         return self
 
-
-    """def fit(self):
-        es = callbacks.EarlyStopping(patience=10, restore_best_weights=True)
-        self.history = self.model.fit(self.X_train_scaled, self.y_train,
-                                 batch_size=16,
-                                 epochs=1000,
-                                 validation_data = (self.X_val_scaled,self.y_val),
-                                 callbacks=[es],
-                                 verbose=1)"""
-
-    def eval(self):
-        #self.score = accuracy_score(self.grid_search.best_estimator_.predict(self.X_test), self.y_test)
-        error = self.model.evaluate(self.X_test_scaled, self.y_test, verbose=0)
-        return error
-
-    def predict(self, features_to_predict):
-        return self.model.predict(features_to_predict)
-
-
-    def create_save_id_model(self):
-        dir_path = os.path.join(os.path.dirname(__file__),'Models','IDs.csv')
-        df_ids = pd.read_csv(dir_path)
-        last_id = df_ids.values.max()
-        new_id = last_id + 1
-
-        with open(dir_path, "a") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([new_id.tolist()])
-        if new_id < 10:
-            self.ID = f"000{new_id}"
-        elif new_id < 100:
-            self.ID = f"00{new_id}"
-        elif new_id < 1000:
-            self.ID = f"0{new_id}"
-        else:
-            self.ID = f"{new_id}"
-        return self.ID
-
-
-    def save_model_locally(self):
-        """Save the model into a .joblib format"""
-
-        joblib.dump(self.model, f'BatteryProject/ModelTwo/Models/model_{self.ID}.joblib')
-        filename = f'model_{self.ID}.joblib'
-        dir_path = os.path.dirname(__file__)
-        joblib.dump(self.model, os.path.join(dir_path,'..','..', filename))
-        return self
-
-
-    def save_model(self):
-        """Save the model into a .joblib format"""
-
-        #get the ID
-        self.create_save_id_model()
-
-        #Save in MLFlow
-        EXPERIMENT_NAME = f"[FR] [Marseille] [BatteryTeam] Battery_ModelTwo + 1"
-        self.experiment_name = EXPERIMENT_NAME
-        self.mlflow_log_param("ID", self.ID)
-        self.mlflow_log_param("deep", self.deep)
-        self.mlflow_log_param("offset", self.offset)
-        self.mlflow_log_param("unit_type", self.unit_type)
-        self.mlflow_log_param("n_units", self.n_units)
-        self.mlflow_log_param("dropout_rate", self.dropout)
-        self.mlflow_log_param("dropout_layer", self.dropout_layer)
-
-        for feature in list(self.features_name.keys()):
-            self.mlflow_log_param(feature, 1)
-
-        self.mlflow_log_metric("baseline", self.baseline)
-        self.mlflow_log_metric("train_eval", self.eval_results['eval_train'])
-        self.mlflow_log_metric("validation_eval", self.eval_results['eval_val'])
-        self.mlflow_log_metric("test_eval", self.eval_results['eval_test'])
-        self.mlflow_log_metric("training_time", self.training_time)
-        self.mlflow_log_metric("epochs", len(self.history.history['loss']))
-
-        self.save_model_locally()
-        return self
-
-
     def plot_mse(self, title=None):
         """ """
         if not self.history:
@@ -288,67 +203,169 @@ class Trainer():
         ax1.set_title('Model loss')
         ax1.set_ylabel('Loss')
         ax1.set_xlabel('Epoch')
-        ax1.set_ylim(ymin=0, ymax=500000)
+        ax1.set_ylim(ymin=0, ymax=1000000)
         ax1.legend(['Train', 'Validation'], loc='best')
         ax1.grid(axis="x",linewidth=0.5)
         ax1.grid(axis="y",linewidth=0.5)
         ax2.plot(history.history['root_mean_squared_error'])
         ax2.plot(history.history['val_root_mean_squared_error'])
-        ax2.set_title('RMSE')
-        ax2.set_ylabel('RMSE')
+        ax2.set_title('MSE')
+        ax2.set_ylabel('MSE')
         ax2.set_xlabel('Epoch')
-        ax2.set_ylim(ymin=0, ymax=500)
+        ax2.set_ylim(ymin=0, ymax=1000)
         ax2.legend(['Train', 'Validation'], loc='best')
         ax2.grid(axis="x",linewidth=0.5)
         ax2.grid(axis="y",linewidth=0.5)
         plt.show()
 
+    def eval(self):
+        '''
+        Evaluate the model
+        '''
 
-    def gen_one_cell(self, type="medium", offset=0):
-        """
-            return one reference cell (for prediction)
-            (1,deep,features)
-        """
-        bad_cell_range_max = 500
-        good_cell_range_min = 1000
+        res_train = self.model.evaluate(self.X_train_scaled, self.y_train, batch_size=None)[1]
+        res_val = self.model.evaluate(self.X_val_scaled, self.y_val, batch_size=None)[1]
+        res_test = self.model.evaluate(self.X_test_scaled, self.y_test,batch_size=None)[1]
 
-        if type == "bad":
-            mask = self.y_test < bad_cell_range_max
-        elif type == "medium":
-            mask = (self.y_test >= bad_cell_range_max) & (self.y_test < good_cell_range_min)
-        elif type == "good":
-            mask = self.y_test >= good_cell_range_min
+        eval_dict = {
+            'eval_train' : res_train,
+            'eval_val' : res_val,
+            'eval_test' : res_test
+        }
 
-        X_test = self.X_test[mask]
-        y_test = self.y_test[mask]
-        id = np.random.randint(0,len(y_test))
-        X_test_scaled = self.scaler.transform(np.array([X_test[id]]))
-        return X_test_scaled, y_test[id]
+        self.eval_results = eval_dict
 
+        return eval_dict
 
-# MLFlow methods
-    @memoized_property
-    def mlflow_client(self):
-        mlflow.set_tracking_uri(MLFLOW_URI)
-        return mlflow.tracking.MlflowClient()
-
-    @memoized_property
-    def mlflow_experiment_id(self):
+    def save_model(self):
+        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models','Models_records.csv')
+        df_records = pd.read_csv(dir_path)
         try:
-            return self.mlflow_client.create_experiment(self.experiment_name)
-        except BaseException:
-            return self.mlflow_client.get_experiment_by_name(
-                self.experiment_name).experiment_id
+            df_records = df_records.drop(columns='Unnamed: 0')
+        except:
+            pass
 
-    @memoized_property
-    def mlflow_run(self):
-        return self.mlflow_client.create_run(self.mlflow_experiment_id)
-    def mlflow_log_param(self,key, value):
-        self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
-    def mlflow_log_params(self, dict_params):
-        self.mlflow_client.log_params(self.mlflow_run.info.run_id, dict_params)
-    def mlflow_log_metric(self,key, value):
-        self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
+        if df_records.shape[0] == 0:
+            print("1st row added to the model")
+            print('\n')
+            new_id=1
+        else:
+            last_id = df_records['Try_ID'].values.max()
+            new_id = last_id + 1
+            print("adding a row in the model")
+            print('\n')
+
+        data = pd.DataFrame()
+        data['Try_ID'] = [new_id]
+
+        data["ID"] = [self.ID]
+        data["deep"] = [self.deep]
+        data["offset"] = [self.offset]
+
+        data["HyperParams_unit_type"] = [self.unit_type]
+        data["HyperParams_n_units"] = [self.n_units]
+        data["HyperParams_n_layer"] = [self.n_layer]
+        data["HyperParams_dropout_rate"] = [self.dropout]
+        data["HyperParams_dropout_layer"] = [self.dropout_layer]
+
+        for key in self.features_name.keys():
+            data[f"Features_{key}"] = ['X']
+
+        data["Metrics_baseline"] = [self.baseline]
+        data["Metrics_train_eval"] = [self.eval_results['eval_train']]
+        data["Metrics_validation_eval"] = [self.eval_results['eval_val']]
+        data["Metrics_test_eval"] = [self.eval_results['eval_test']]
+        data["Metrics_training_time"] = [self.training_time]
+        data["Metrics_epochs"] = [len(self.history.history['loss'])]
+
+
+        print("==== data added to the df======")
+        print(data)
+        print('\n')
+        df_records = df_records.append(data, ignore_index=True)
+
+        col_list = df_records.columns
+        col_l1 = ['Try_ID',  'Model', 'Scaler']
+        col_l2 = [a for a in col_list if a[0:8] == 'Features']
+        col_l3 = [a for a in col_list if a[0:7] == 'Metrics']
+        col_l4 = [a for a in col_list if a[0:11] == 'HyperParams']
+
+        new_col_list = col_l1 + col_l2 + col_l3 + col_l4
+        df_records = df_records[new_col_list]
+
+        print("saving the record")
+        print(df_records)
+        print("\n")
+        df_records.to_csv(dir_path)
+
+        if new_id <= 9:
+            self.ID = f"000{new_id}"
+        elif new_id < 99:
+            self.ID = f"00{new_id}"
+        elif new_id < 999:
+            self.ID = f"0{new_id}"
+        else:
+            self.ID = f"{new_id}"
+
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models', f"model_{self.ID}.joblib")
+        joblib.dump(self.model, model_path)
+
+        return self
+
+    def save_data(self):
+        raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
+        X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
+        bc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"bc_{self.ID}.csv")
+        self.raw_test.to_csv(raw_data_path)
+        np.savetxt(X_test_path , self.X_test, delimiter=",")
+        np.savetxt(y_test_path, self.y_test, delimiter=",")
+
+        self.raw_data['disc_capa'].iloc[self.test_index,:].to_csv(raw_data_path)
+        np.savetxt(X_test_path , self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
+        np.savetxt(X_test_scaled_path , self.X_test.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
+        np.savetxt(y_test_path, self.y_test, delimiter=",")
+        np.savetxt(bc_path , self.bc_test, delimiter=",",, fmt="%s")
 
 if __name__ == '__main__':
-    trainer = Trainer()
+    # feat = features[0]
+    # deep = deeps_offset[0]['deep']
+    # offset = deeps_offset[0]['offset']
+    # trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
+    # trainer_data.get_data()
+    # trainer_data.scaling()
+    # trainer_data.save_test_csv()
+
+
+    for feat in features:
+        for val in deeps_offset:
+            deep = val['deep']
+            offset = val['offset']
+            trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
+            trainer_data.get_data()
+            trainer_data.scaling()
+            trainer_data.get_baseline()
+
+            for unit_type in unit_types:
+                for n_unit in n_units:
+                    for n_layer in n_layers:
+                        for drop in dropout:
+                            for drop_layer in dropout_layer:
+                                t = Trainer(features_name = feat, deep = deep, offset = offset)
+                                t.raw_data = trainer_data.raw_data
+                                t.X_train = trainer_data.X_train
+                                t.X_test = trainer_data.X_test
+                                t.X_val = trainer_data.X_val
+                                t.X_train_scaled = trainer_data.X_train_scaled
+                                t.X_test_scaled = trainer_data.X_test_scaled
+                                t.X_val_scaled = trainer_data.X_val_scaled
+                                t.y_train = trainer_data.y_train
+                                t.y_test = trainer_data.y_test
+                                t.y_val = trainer_data.y_val
+                                t.baseline = trainer_data.baseline
+                                t.set_pipeline(unit_type = unit_type, n_layer=n_layer, n_unit = n_unit, dropout = drop, dropout_layer= drop_layer)
+                                t.run(epochs = 500)
+                                t.eval()
+                                t.save_model()
+                                t.save_data()

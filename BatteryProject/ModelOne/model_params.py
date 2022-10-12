@@ -13,26 +13,25 @@ features = {
     'feature_two' : {
         'disc_capa' : 'summary_discharge_capacity.csv'},
 
-    'feature_three' : {
+   'feature_three' : {
         'disc_capa' : 'summary_discharge_capacity.csv',
         'dis_ener' : 'summary_discharge_energy.csv',
         'eff_ener' : 'summary_energy_efficiency.csv',
         'char_capa' : 'summary_charge_capacity.csv',
         'char_ener' : 'summary_charge_energy.csv',
-        'dc_res' : 'summary_dc_internal_resistance.csv'},
+       'dc_res' : 'summary_dc_internal_resistance.csv'},
 
     'feature_four' : {
         'disc_capa' : 'summary_discharge_capacity.csv',
-        'dis_ener' : 'summary_discharge_energy.csv',
-        'eff_ener' : 'summary_energy_efficiency.csv',
-        'char_capa' : 'summary_charge_capacity.csv',
-        'char_ener' : 'summary_charge_energy.csv',
-        'dc_res' : 'summary_dc_internal_resistance.csv',
-        'temp_avg' : 'summary_temperature_average.csv',
-        'temp_min' : 'summary_temperature_minimum.csv',
-        'temp_max' : 'summary_temperature_maximum.csv'
-        }
-}
+       'dis_ener' : 'summary_discharge_energy.csv',
+       'eff_ener' : 'summary_energy_efficiency.csv',
+       'char_capa' : 'summary_charge_capacity.csv',
+       'char_ener' : 'summary_charge_energy.csv',
+       'dc_res' : 'summary_dc_internal_resistance.csv',
+       'temp_avg' : 'summary_temperature_average.csv',
+       'temp_min' : 'summary_temperature_minimum.csv',
+       'temp_max' : 'summary_temperature_maximum.csv'
+       }}
 
 model_scalers = {
         "RobustScaler" : RobustScaler(),
@@ -69,15 +68,15 @@ models = {
                 }
                 ]
             ],
-    'random_forest' : [
-                RandomForestClassifier(),
-                [
-                {
-                'model__n_estimators' : [50,100,200,400],
-                'model__min_samples_split' : [2,4,6],
-                'model__min_samples_leaf' : [1,2,3,4]
-                }
-                ]
-            ]
+            'random_forest' : [
+                       RandomForestClassifier(),
+                       [
+                       {
+                       'model__n_estimators' : [50,100,200,400],
+                       'model__min_samples_split' : [2,4,6],
+                       'model__min_samples_leaf' : [1,2,3,4]
+                       }
+                       ]
+                   ]
 
         }

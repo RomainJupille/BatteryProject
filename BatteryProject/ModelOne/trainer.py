@@ -1,4 +1,5 @@
 from pickle import TRUE
+from unittest import expectedFailure
 import numpy as np
 import pandas as pd
 import joblib
@@ -95,7 +96,7 @@ class Trainer():
     def run(self, grid_params):
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
-        gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy")
+        gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy", verbose = 0)
         self.scaler_name = str(self.pipeline["scaler"]).split('(', 1)[0]
         self.model_name = str(self.pipeline["model"]).split('(', 1)[0]
 
@@ -108,7 +109,7 @@ class Trainer():
     def print_learning_curve(self):
 
         self.best_model = self.grid_search.best_estimator_["model"]
-        train_sizes = list(range(20,108,10))
+        train_sizes = np.linspace(0.1,1.0,10)
         train_sizes, train_scores, test_scores = learning_curve(
         self.best_model, X=self.X, y=self.y, train_sizes=train_sizes, cv=5, n_jobs=-1)
         train_scores_mean = np.mean(train_scores, axis=1)
@@ -133,37 +134,63 @@ class Trainer():
         return self.evaluation
 
     def save_model(self):
-        dir_path = os.path.join(os.path.dirname(__file__),'Models','IDs.csv')
-        df_records = pd.read_csv(dir_path)
-        try:
-            df_records = df_records.drop(columns='Unnamed: 0')
-        except:
-            pass
+        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models','Models_records.csv')
 
-        if df_records.shape[0] == 0:
+        try:
+            df_records = pd.read_csv(dir_path)
+
+            try:
+                df_records = df_records.drop(columns='Unnamed: 0')
+            except:
+                pass
+
+            if df_records.shape[0] == 0:
+                print("1st row added to the model")
+                print('\n')
+                new_id=1
+            else:
+                last_id = df_records['Try_ID'].values.max()
+                new_id = last_id + 1
+                print("adding a row in the model")
+                print('\n')
+
+        except:
+            df_records = pd.DataFrame()
+            print("creating the dataframe")
+            print('\n')
             new_id=1
-        else:
-            last_id = df_records['Try_ID'].values.max()
-            new_id = last_id + 1
+
+
 
         data = pd.DataFrame()
-        data['Try_ID'] = new_id
-        data['Model'] = self.model_name
-        data['Scaler'] = self.scaler_name
-        data['Feature_list'] = list(self.features_name.keys())
+        data['Try_ID'] = [new_id]
+        data['Model'] = [self.model_name]
+        data['Scaler'] = [self.scaler_name]
+
+        for key in self.features_name.keys():
+            data[f"Features_{key}"] = ['X']
+
         for key, value in self.evaluation.items():
-            data[f"metrics_{key}"] = value
+            data[f"Metrics_{key}"] = [value]
+
         for key, values in self.grid_search.best_params_.items():
-            data[f"HyperParams_{key.split('__')[1]}"] = values
-
+            data[f"HyperParams_{key.split('__')[1]}"] = [values]
+        print("==== data added to the df======")
+        print(data)
+        print('\n')
         df_records = df_records.append(data, ignore_index=True)
-        col_list = df_records.columns
-        col_l1 = ['Try_ID',  'Model', 'Scaler', 'Feature_list']
-        col_l2 = [a for a in col_list if a[0:7] == 'metrics']
-        col_l3 = [a for a in col_list if a[0:11] == 'HyperParams']
-        new_col_list = col_l1 + col_l2 + col_l3
-        df_ids = df_ids[new_col_list]
 
+        col_list = df_records.columns
+        col_l1 = ['Try_ID',  'Model', 'Scaler']
+        col_l2 = [a for a in col_list if a[0:8] == 'Features']
+        col_l3 = [a for a in col_list if a[0:7] == 'Metrics']
+        col_l4 = [a for a in col_list if a[0:11] == 'HyperParams']
+        new_col_list = col_l1 + col_l2 + col_l3 + col_l4
+        df_records = df_records[new_col_list]
+
+        print("saving the record")
+        print(df_records)
+        print("\n")
         df_records.to_csv(dir_path)
 
         if new_id <= 9:
@@ -175,13 +202,16 @@ class Trainer():
         else:
             self.ID = f"{new_id}"
 
-        model_path = os.path.join(os.path.dirname(__file__),'Models', f"model_{self.ID}.joblib")
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models', f"model_{self.ID}.joblib")
         joblib.dump(self.grid_search.best_estimator_, model_path)
 
-    def save_test_csv(self):
-        self.raw_test.to_csv("BatteryProject/ModelOne/test_data/raw_data_test_model_one.csv")
-        np.savetxt("BatteryProject/ModelOne/test_data/X_test_model_one.csv", self.X_test, delimiter=",")
-        np.savetxt("BatteryProject/ModelOne/test_data/y_test_model_one.csv", self.y_test, delimiter=",")
+    def save_data(self):
+        raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
+        X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
+        self.raw_test.to_csv(raw_data_path)
+        np.savetxt(X_test_path , self.X_test, delimiter=",")
+        np.savetxt(y_test_path, self.y_test, delimiter=",")
 
 if __name__ == '__main__':
     #trainer = Trainer()
@@ -205,11 +235,14 @@ if __name__ == '__main__':
               trainer.run(grid)
               trainer.eval()
               trainer.save_model()
+              trainer.save_data()
 
               print(f"==== {i} combination ====")
-              print(feat)
+              print(list(feat.keys()))
               print(trainer.grid_search.best_estimator_)
+              print(trainer.grid_search.best_params_)
               print(trainer.evaluation)
+              print(trainer.ID)
               print('\n')
 
               i+= 1
