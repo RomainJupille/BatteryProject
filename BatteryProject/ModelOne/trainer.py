@@ -46,12 +46,8 @@ class Trainer():
             self.binary = False
         else :
             self.binary = True
-
         self.target_name = 'disc_capa'
         self.grid_params = grid_params
-
-        # for MLFlow
-        self.experiment_name = None
 
     def get_data(self, features_name):
         '''
@@ -90,7 +86,13 @@ class Trainer():
     def run(self, grid_params):
         """ Run a Grid Search on the grid search params """
         self.grid_params = grid_params
-        gs_results = GridSearchCV(self.pipeline, self.grid_params, n_jobs = -1, cv = 5, scoring="accuracy", verbose = 0)
+        gs_results = GridSearchCV(self.pipeline,
+                                  self.grid_params,
+                                  n_jobs = -1,
+                                  cv = 5,
+                                  scoring=["accuracy", 'precision', 'roc_auc'],
+                                  refit = "roc_auc",
+                                  verbose = 0)
         self.scaler_name = str(self.pipeline["scaler"]).split('(', 1)[0]
         self.model_name = str(self.pipeline["model"]).split('(', 1)[0]
 
@@ -118,11 +120,11 @@ class Trainer():
         plt.legend()
 
     def eval(self):
-        prediction = self.grid_search.best_estimator_.predict(self.X_test)
+        best_index = self.grid_search.best_index_
         dic = {
-        'accuracy' : accuracy_score(prediction, self.y_test),
-        'precision' : precision_score(prediction, self.y_test),
-        'roc_auc' : roc_auc_score(prediction, self.y_test)
+        'accuracy' : self.grid_search.cv_results_['mean_test_accuracy'][best_index],
+        'precision' : self.grid_search.cv_results_['mean_test_precision'][best_index],
+        'roc_auc' : self.grid_search.cv_results_['mean_test_roc_auc'][best_index]
         }
         self.evaluation = dic
         return self.evaluation
@@ -209,10 +211,6 @@ class Trainer():
         np.savetxt(y_test_path, self.y_test, delimiter=",")
 
 if __name__ == '__main__':
-    #trainer = Trainer()
-    #feat = features['feature_four']
-    #trainer.get_data(feat)
-    #trainer.save_test_csv()
 
     n_feat = len(features.values())
     n_param = len(models.values())
