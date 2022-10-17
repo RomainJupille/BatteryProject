@@ -1,12 +1,10 @@
-from tensorflow.keras.layers import LSTM
-
 features = [
     {
         'disc_capa' : 'summary_discharge_capacity.csv',
         'dis_ener' : 'summary_discharge_energy.csv',
         'char_capa' : 'summary_charge_capacity.csv'},
-    {
-        'disc_capa' : 'summary_discharge_capacity.csv'},
+    # {
+    #     'disc_capa' : 'summary_discharge_capacity.csv'},
     #     'disc_capa' : 'summary_discharge_capacity.csv',
     #     'dis_ener' : 'summary_discharge_energy.csv',
     #     'eff_ener' : 'summary_energy_efficiency.csv',
@@ -23,7 +21,7 @@ features = [
         'temp_avg' : 'summary_temperature_average.csv',
         'temp_min' : 'summary_temperature_minimum.csv',
         'temp_max' : 'summary_temperature_maximum.csv'
-        }
+    }
     ]
 
 deeps_offset = [
@@ -31,18 +29,27 @@ deeps_offset = [
         #     'deep' : 10,
         #     'offset' : 15
         # },
-        # {
-        #     'deep' : 20,
-        #     'offset' : 20
-        # },
+        {
+            'deep' : 20,
+            'offset' : 20
+        },
+        {
+            'deep' : 40,
+            'offset' : 20
+        },
     {
         'deep' : 40,
         'offset' : 40
     }
 ]
 
-unit_types = ['LSTM', 'GRU']
-n_layers = [2]
-n_units = [2]
-dropout = [0.3]
+unit_types = ['LSTM']
+n_layers = [2,3]
+
+n_units = [3,4]
+#n_units = [4]
+
+#dropout = [0.1,0.2]
+dropout = [0.2,0.3]
+
 dropout_layer = [True]

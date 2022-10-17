@@ -1,11 +1,12 @@
-import csv
+import joblib
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import joblib
-from timeit import default_timer as timer
 
+from timeit import default_timer as timer
+from re import S
 
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.models import Sequential
@@ -13,7 +14,7 @@ from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 
-from BatteryProject.data import get_data_local
+from BatteryProject.get_feature import get_data_local
 from BatteryProject.ModelTwo.get_features import get_features_target
 from BatteryProject.ModelTwo.loss import root_mean_squared_error
 from BatteryProject.ModelTwo.model_params import *
@@ -49,6 +50,14 @@ class Trainer():
         #spliting the data indexes into 3 sub-sets
         self.train_index, self.test_index = train_test_split(np.arange(df_dict['disc_capa'].shape[0]) , test_size = 0.2, random_state=1)
         self.train_index, self.val_index = train_test_split(self.train_index , test_size = 0.25, random_state=1)
+
+        self.split_indexes = {}
+        self.split_indexes['train'] = self.train_index
+        self.split_indexes['val'] = self.val_index
+        self.split_indexes['test'] = self.test_index
+
+
+
 
         #get the data and store them into class variables
         self.X_train, self.y_train, self.bc_train = get_features_target(self.raw_data, self.deep, self.offset, self.train_index)
@@ -257,8 +266,6 @@ class Trainer():
 
         data = pd.DataFrame()
         data['Try_ID'] = [new_id]
-
-        data["ID"] = [self.ID]
         data["deep"] = [self.deep]
         data["offset"] = [self.offset]
 
@@ -285,7 +292,7 @@ class Trainer():
         df_records = df_records.append(data, ignore_index=True)
 
         col_list = df_records.columns
-        col_l1 = ['Try_ID',  'Model', 'Scaler']
+        col_l1 = ['Try_ID',  'deep', 'offset']
         col_l2 = [a for a in col_list if a[0:8] == 'Features']
         col_l3 = [a for a in col_list if a[0:7] == 'Metrics']
         col_l4 = [a for a in col_list if a[0:11] == 'HyperParams']
@@ -313,20 +320,24 @@ class Trainer():
         return self
 
     def save_data(self):
-        raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
+        #raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
+        train_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"train_split_index_{self.ID}.csv")
+        val_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"val_split_index_{self.ID}.csv")
+        test_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"test_split_index_{self.ID}.csv")
         X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
-        X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_scaled{self.ID}.csv")
         y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
         bc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"bc_{self.ID}.csv")
-        self.raw_test.to_csv(raw_data_path)
-        np.savetxt(X_test_path , self.X_test, delimiter=",")
-        np.savetxt(y_test_path, self.y_test, delimiter=",")
 
-        self.raw_data['disc_capa'].iloc[self.test_index,:].to_csv(raw_data_path)
+        #self.split_indexes.to_csv(split_index_path)
+        np.savetxt(train_split_index_path , self.train_index, delimiter=",")
+        np.savetxt(val_split_index_path , self.val_index, delimiter=",")
+        np.savetxt(test_split_index_path , self.test_index, delimiter=",")
+
         np.savetxt(X_test_path , self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
         np.savetxt(X_test_scaled_path , self.X_test.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
         np.savetxt(y_test_path, self.y_test, delimiter=",")
-        np.savetxt(bc_path , self.bc_test, delimiter=",",, fmt="%s")
+        np.savetxt(bc_path , self.bc_test, delimiter=",", fmt="%s")
 
 if __name__ == '__main__':
     # feat = features[0]
@@ -354,7 +365,13 @@ if __name__ == '__main__':
                             for drop_layer in dropout_layer:
                                 t = Trainer(features_name = feat, deep = deep, offset = offset)
                                 t.raw_data = trainer_data.raw_data
+                                t.split_indexes = trainer_data.split_indexes
+                                t.train_index = trainer_data.train_index
+                                t.val_index = trainer_data.val_index
+                                t.test_index = trainer_data.test_index
+
                                 t.X_train = trainer_data.X_train
+                                t.bc_test = trainer_data.bc_test
                                 t.X_test = trainer_data.X_test
                                 t.X_val = trainer_data.X_val
                                 t.X_train_scaled = trainer_data.X_train_scaled

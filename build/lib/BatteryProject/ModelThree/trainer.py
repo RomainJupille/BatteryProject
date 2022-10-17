@@ -10,9 +10,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split, learning_curve
 
 
-from BatteryProject.data import get_data_local
-from BatteryProject.ModelThree.get_features import get_features_target
-from BatteryProject.ModelThree.loss import root_mean_squared_error
+from BatteryProject.get_feature import get_data_local
+from BatteryProject.ModelTwo.get_features import get_features_target
+from BatteryProject.ModelTwo.loss import root_mean_squared_error
 
 class Trainer():
 

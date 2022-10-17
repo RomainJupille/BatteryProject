@@ -209,6 +209,7 @@ class Trainer():
         raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
         X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
         y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
+
         self.raw_test.to_csv(raw_data_path)
         np.savetxt(X_test_path , self.X_test, delimiter=",")
         np.savetxt(y_test_path, self.y_test, delimiter=",")

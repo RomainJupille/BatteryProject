@@ -20,7 +20,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, roc_auc_score
 from sklearn.model_selection import learning_curve
 
-from BatteryProject.data import get_data_local, get_data_gcp
+from BatteryProject.get_feature import get_data_local
 from BatteryProject.ModelOne.get_features import get_features_target
 from BatteryProject.ModelOne.model_params import features, models
 from BatteryProject.params import *
