@@ -5,5 +5,5 @@
 *.csv
 **/__pycache__/
 .env
-/notebooks/
 *.joblib
+/_old/
