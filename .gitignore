@@ -2,8 +2,10 @@
 .coverage
 .ipynb_checkpoints
 .DS_Store
-*.csv
 **/__pycache__/
 .env
-*.joblib
 **/old/
+
+**/data/*.csv
+**/models/*.joblib
+ModelOne/data/*.csv

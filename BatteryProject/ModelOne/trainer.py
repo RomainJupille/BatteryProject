@@ -1,12 +1,6 @@
-from pickle import TRUE
-from unittest import expectedFailure
 import numpy as np
 import pandas as pd
 import joblib
-#from mlflow.tracking import MlflowClient
-from memoized_property import memoized_property
-#import mlflow
-import csv
 import os
 import matplotlib.pyplot as plt
 
@@ -17,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, roc_auc_score
 from sklearn.model_selection import learning_curve
 
-from BatteryProject.data import get_data_local
+from BatteryProject.get_feature import get_data_local
 from BatteryProject.ModelOne.get_features import get_features_target
 from BatteryProject.ModelOne.model_params import features, models, model_scalers
 # from BatteryProject.params import *
@@ -51,7 +45,7 @@ class Trainer():
         if len(classes) > 1 :
             self.binary = False
         else :
-            self.binary = TRUE
+            self.binary = True
 
         self.target_name = 'disc_capa'
         self.grid_params = grid_params
@@ -134,7 +128,7 @@ class Trainer():
         return self.evaluation
 
     def save_model(self):
-        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models','Models_records.csv')
+        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'best_model','models_record.csv')
 
         try:
             df_records = pd.read_csv(dir_path)
@@ -202,7 +196,7 @@ class Trainer():
         else:
             self.ID = f"{new_id}"
 
-        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models', f"model_{self.ID}.joblib")
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'models', f"model_{self.ID}.joblib")
         joblib.dump(self.grid_search.best_estimator_, model_path)
 
     def save_data(self):
