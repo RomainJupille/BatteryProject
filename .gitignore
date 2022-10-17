@@ -6,4 +6,4 @@
 **/__pycache__/
 .env
 *.joblib
-/_old/
+**/_old/
