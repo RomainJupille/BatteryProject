@@ -1,12 +1,10 @@
 import joblib
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
 
 from timeit import default_timer as timer
-from re import S
 
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.models import Sequential
@@ -231,15 +229,12 @@ class Trainer():
         '''
         Evaluate the model
         '''
-
         res_train = self.model.evaluate(self.X_train_scaled, self.y_train, batch_size=None)[1]
         res_val = self.model.evaluate(self.X_val_scaled, self.y_val, batch_size=None)[1]
-        res_test = self.model.evaluate(self.X_test_scaled, self.y_test,batch_size=None)[1]
 
         eval_dict = {
             'eval_train' : res_train,
-            'eval_val' : res_val,
-            'eval_test' : res_test
+            'eval_val' : res_val
         }
 
         self.eval_results = eval_dict
@@ -247,7 +242,7 @@ class Trainer():
         return eval_dict
 
     def save_model(self):
-        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models','Models_records.csv')
+        dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'best_model','models_record.csv')
         df_records = pd.read_csv(dir_path)
         try:
             df_records = df_records.drop(columns='Unnamed: 0')
@@ -281,7 +276,6 @@ class Trainer():
         data["Metrics_baseline"] = [self.baseline]
         data["Metrics_train_eval"] = [self.eval_results['eval_train']]
         data["Metrics_validation_eval"] = [self.eval_results['eval_val']]
-        data["Metrics_test_eval"] = [self.eval_results['eval_test']]
         data["Metrics_training_time"] = [self.training_time]
         data["Metrics_epochs"] = [len(self.history.history['loss'])]
 
@@ -314,40 +308,30 @@ class Trainer():
         else:
             self.ID = f"{new_id}"
 
-        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'Models', f"model_{self.ID}.joblib")
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'models', f"model_{self.ID}.joblib")
         joblib.dump(self.model, model_path)
 
         return self
 
     def save_data(self):
         #raw_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"raw_data_{self.ID}.csv")
-        train_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"train_split_index_{self.ID}.csv")
-        val_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"val_split_index_{self.ID}.csv")
-        test_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"test_split_index_{self.ID}.csv")
-        X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        #train_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"train_split_index_{self.ID}.csv")
+        #val_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"val_split_index_{self.ID}.csv")
+        #test_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"test_split_index_{self.ID}.csv")
         X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_scaled{self.ID}.csv")
         y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
         bc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"bc_{self.ID}.csv")
 
         #self.split_indexes.to_csv(split_index_path)
-        np.savetxt(train_split_index_path , self.train_index, delimiter=",")
-        np.savetxt(val_split_index_path , self.val_index, delimiter=",")
-        np.savetxt(test_split_index_path , self.test_index, delimiter=",")
+        #np.savetxt(train_split_index_path , self.train_index, delimiter=",")
+        #np.savetxt(val_split_index_path , self.val_index, delimiter=",")
+        #np.savetxt(test_split_index_path , self.test_index, delimiter=",")
 
-        np.savetxt(X_test_path , self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
-        np.savetxt(X_test_scaled_path , self.X_test.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
+        np.savetxt(X_test_scaled_path , self.X_test_scaled.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
         np.savetxt(y_test_path, self.y_test, delimiter=",")
         np.savetxt(bc_path , self.bc_test, delimiter=",", fmt="%s")
 
 if __name__ == '__main__':
-    # feat = features[0]
-    # deep = deeps_offset[0]['deep']
-    # offset = deeps_offset[0]['offset']
-    # trainer_data = Trainer(features_name = feat, deep = deep, offset = offset)
-    # trainer_data.get_data()
-    # trainer_data.scaling()
-    # trainer_data.save_test_csv()
-
 
     for feat in features:
         for val in deeps_offset:
