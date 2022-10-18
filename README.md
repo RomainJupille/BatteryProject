@@ -19,8 +19,8 @@ This project only deals with 'summary features'.
 
 # Presentation of project
 The goal of the project is to:
- 1/ Create a binary classification model that predicts if a battery will reach a given treshold of life-cycles based on the observation of some first cycles.
- 2/ Create a regression model predicting the number of life-cycle left to the battery before it fails based on the observation of its previous cycles.
+ - Create a binary classification model that predicts if a battery will reach a given treshold of life-cycles based on the observation of some first cycles.
+ - Create a regression model predicting the number of life-cycle left to the battery before it fails based on the observation of its previous cycles.
 
 The project is composed of four steps
 - Extraction, transformation and cleaning of the orignal dataset in a proper format for next steps
@@ -105,20 +105,20 @@ Description of the python files:
 - model_params.py contains the list of hyper-parameters of the model to be tested when running the model
 - get_feature.py contrains the method to get the data from the TransformedData directory
 - trainer.py contains
-  -> the class definition and methods of the trainer class used to train, test and saved different models
-  -> the __main__ code that should be run to launch the model training
+  - the class definition and methods of the trainer class used to train, test and saved different models
+  - the __main__ code that should be run to launch the model training
 
 When run, the trainer.py __main__ code achieve the following steps:
 - get all the combination of model arcgitecture and hyper-parameters from the 'model_params.py' file
 - test all the [features, model, scaler] combinations in a loop using the trainer class. For each trio:
-  -> create a train class
-  -> get the features and create a train/test split
-  -> set the pipeline
-  -> train the model with a grid_search (testing all hyper-parameters)
-  -> evaluate the model (accuracy, precision, roc_aux) with the grid-search
-  -> save the model results and performance (feature used, model, scaler, hyper-parameters, performance metrics ) in models_record.csv file in the best_model directory
-  -> save the data to run the final testing (X_test, y_test, model.joblib) in the repository data
-  -> save the model.joblib (in the models directory)
+  - create a train class
+  - get the features and create a train/test split
+  - set the pipeline
+  - train the model with a grid_search (testing all hyper-parameters)
+  - evaluate the model (accuracy, precision, roc_aux) with the grid-search
+  - save the model results and performance (feature used, model, scaler, hyper-parameters, performance metrics ) in models_record.csv file in the best_model directory
+  - save the data to run the final testing (X_test, y_test, model.joblib) in the repository data
+  - save the model.joblib (in the models directory)
 
 
 To explore the trainer class, refer to the notebook '03_test_model_one_trainer_class' directory
@@ -153,17 +153,17 @@ For this purpose we construct a new sample set from the initial data
 - LSTM only have been tested during the project however it can be changed to GRU in the paremeters)
 - The overfitting is manged with early stopping and dropout
 - We tested a RNN model with different configurations
-  -> different number of layers from 3 and 4
-  -> different number of units in each cell from 4 and 5
-  -> different dropout rate
+  - different number of layers from 3 and 4
+  - different number of units in each cell from 4 and 5
+  - different dropout rate
 
 ### Results
 - The best model performance
-  -> rmse of 211 (which means that the battery make an everage error or 221 life-cycles)
-  -> mean percentage error of 21.8%
+  - rmse of 211 (which means that the battery make an everage error or 221 life-cycles)
+  - mean percentage error of 21.8%
 - The model performs better for battery with lower number of life-cycles left
-  -> The mean percentage error for samples with less than 600 cycles left is 19.7%
-  -> The error is 27% for batteries with more than 600 cyles
+  - The mean percentage error for samples with less than 600 cycles left is 19.7%
+  - The error is 27% for batteries with more than 600 cyles
 
 Parameters of the best model
 - Unit type              LSTM
