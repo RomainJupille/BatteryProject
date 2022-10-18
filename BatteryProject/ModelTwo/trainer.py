@@ -318,7 +318,9 @@ class Trainer():
         #train_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"train_split_index_{self.ID}.csv")
         #val_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"val_split_index_{self.ID}.csv")
         #test_split_index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"test_split_index_{self.ID}.csv")
-        X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_scaled{self.ID}.csv")
+
+        X_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_{self.ID}.csv")
+        X_test_scaled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"X_test_scaled_{self.ID}.csv")
         y_test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"y_test_{self.ID}.csv")
         bc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', f"bc_{self.ID}.csv")
 
@@ -328,6 +330,8 @@ class Trainer():
         #np.savetxt(test_split_index_path , self.test_index, delimiter=",")
 
         np.savetxt(X_test_scaled_path , self.X_test_scaled.reshape(self.X_test_scaled.shape[0], -1), delimiter=",")
+        np.savetxt(X_test_path , self.X_test.reshape(self.X_test.shape[0], -1), delimiter=",")
+
         np.savetxt(y_test_path, self.y_test, delimiter=",")
         np.savetxt(bc_path , self.bc_test, delimiter=",", fmt="%s")
 

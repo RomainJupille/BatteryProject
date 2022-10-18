@@ -44,13 +44,13 @@ deeps_offset = [
 ]
 
 unit_types = ['LSTM']
-#n_layers = [2,3]
-n_layers = [2]
+n_layers = [2,3]
+#n_layers = [2]
 
-#n_units = [4,5]
-n_units = [4]
+n_units = [4,5]
+#n_units = [4]
 
-#dropout = [0.2,0.3]
-dropout = [0.2]
+dropout = [0.2,0.3]
+#dropout = [0.2]
 
 dropout_layer = [True]
