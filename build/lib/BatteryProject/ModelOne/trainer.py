@@ -25,9 +25,6 @@ from BatteryProject.ModelOne.get_features import get_features_target
 from BatteryProject.ModelOne.model_params import features, models
 from BatteryProject.params import *
 
-
-
-
 class Trainer():
 
     def __init__(self, features_name = None, deep = 5, classes = [550], grid_params ={} ):

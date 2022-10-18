@@ -8,7 +8,7 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import RobustScaler
 from sklearn.pipeline import Pipeline
 
-from BatteryProject.data import get_data_local, get_data_gcp
+from BatteryProject.get_feature import get_data_local, get_data_gcp
 from BatteryProject.ModelTwo.get_features import get_features_target
 from BatteryProject.ModelTwo.model_params import features
 
