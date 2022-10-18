@@ -3,9 +3,14 @@ This work is a data-science study project achieved in 2022 by a 4 students team.
 
 The dataset used during the project comes from a Nature Energy article: https://energy.stanford.edu/sites/g/files/sbiybj9971/f/346501527888d799d94279cfe74049fde53ca2d5a1275d083d28f925253cf657.pdf.
 
+The dataset can be downloaded there: https://data.matr.io/1/projects/5c48dd2bc625d700019f3204
+
 The dataset is composed of measurements from a set of 140 batteries that have been fully charged and discharged until they fail.
 During the process several physical and electrical measures have been saved (such as temperature, charge and discharge capacity or internal resistance)
-Batteries generally failled between 300 to 2000 cycles. In average they failled around 600 cycles  .
+To get a sens of the data:
+- The average number of life-cycles is 852
+- The maximum is 2239
+- The minimum is 1 (the problem came from the data acquisition during experiment)
 
 The orignal dataset is composed of:
 - 'Summary features': One measurement per charge/discharge cycle (aggregated information per cycle)
@@ -73,7 +78,7 @@ The notebook '01_data_extraction_step_by_step' shows what the method is doing st
 
 
 
-## Model One: Binnary classification**
+## Model One: Binnary classification
 
 ### Basics of the model
 - Batteries are split into 2 categories: the ones that reached 550 life-cycles and the ones that didn't reach it. This classification is the
@@ -122,14 +127,14 @@ To explore the trainer class, refer to the notebook '03_test_model_one_trainer_c
 (The data of the best model are stored along with the result records are available in the 'best_model' directory)
 
 The model has been tested on the test set. results are as follow:
-**Accuracy of the model: 0.9722222222222222**
-**Precision of the model: 0.9565217391304348**
-**Roc auc of the model: 0.9642857142857143**
-The best model is a logisticregression model that uses only 4 features
-Pipeline(steps=[('scaler', StandardScaler()),
-                ('model',
-                 LogisticRegression(C=5.0, max_iter=500, penalty='l1',
-                                    solver='liblinear'))])
+- **Accuracy of the model: 0.9722222222222222**
+- **Precision of the model: 0.9565217391304348**
+- **Roc auc of the model: 0.9642857142857143**
+- The best model is a logisticregression model that uses only 4 features
+    Pipeline(steps=[('scaler', StandardScaler()),
+      ('model',
+      LogisticRegression(C=5.0, max_iter=500, penalty='l1',
+      solver='liblinear'))])
 
 
 ## Model two: regression model
