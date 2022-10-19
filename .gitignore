@@ -9,3 +9,5 @@
 **/data/*.csv
 **/models/*.joblib
 ModelOne/data/*.csv
+Makefile
+/test

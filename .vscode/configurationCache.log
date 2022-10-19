@@ -1,1 +1,0 @@
-{"buildTargets":["\"XXX\"","@gsutil","all","black","build","check_code","clean","count_lines","cp","ftest","gs","install","install_requirements","pypi","pypi_test","test","upload_data"],"launchTargets":[],"customConfigurationProvider":{"workspaceBrowse":{"browsePath":[],"compilerArgs":[]},"fileIndex":[]}}

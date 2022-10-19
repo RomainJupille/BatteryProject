@@ -121,7 +121,7 @@ When run, the trainer.py __main__ code achieve the following steps:
   - save the model.joblib (in the models directory)
 
 
-To explore the trainer class, refer to the notebook '03_test_model_one_trainer_class' directory
+To explore the trainer class, refer to the notebook '03_test_model_one_trainer_class'
 
 ### Results
 (The data of the best model are stored along with the result records are available in the 'best_model' directory)
@@ -157,6 +157,39 @@ For this purpose we construct a new sample set from the initial data
   - different number of units in each cell from 4 and 5
   - different dropout rate
 
+### Overview of the code
+The code for this model is contained in the ModelOne directory:
+.
+- data
+- models
+- best_model
+- trainer.py
+- get_features.py
+- __init__.py
+- model_params.py
+
+Description of the python files:
+- model_params.py contains the list of hyper-parameters of the model to be tested when running the model
+- get_feature.py contrains the method to get the data from the TransformedData directory
+- trainer.py contains
+  - the class definition and methods of the trainer class used to train, test and saved different models
+  - the __main__ code that should be run to launch the model training
+
+When run, the trainer.py __main__ code achieve the following steps:
+- get all the combination of model arcgitecture and hyper-parameters from the 'model_params.py' file
+- test all the [features, model, scaler] combinations in a loop using the trainer class. For each trio:
+  - create a train class
+  - get the features and create a train/test split
+  - set the pipeline
+  - train the model with a grid_search (testing all hyper-parameters)
+  - evaluate the model (accuracy, precision, roc_aux) with the grid-search
+  - save the model results and performance (feature used, model, scaler, hyper-parameters, performance metrics ) in models_record.csv file in the best_model directory
+  - save the data to run the final testing (X_test, y_test, model.joblib) in the repository data
+  - save the model.joblib (in the models directory)
+
+To explore the trainer class, refer to the notebook '05_test_model_two_trainer_class'
+
+
 ### Results
 - The best model performance
   - rmse of 211 (which means that the battery make an everage error or 221 life-cycles)
@@ -170,3 +203,5 @@ Parameters of the best model
 - Number of units        5
 - Number of layers       2
 - Dropout rate           0.2
+
+Results of this model two are explored in the notebook 06_model_two_results
