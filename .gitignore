@@ -7,7 +7,7 @@
 .env
 **/old/
 
-**/rapports/*.pptx
+rapports/*.pptx
 
 **/data/*.csv
 **/models/*.joblib
