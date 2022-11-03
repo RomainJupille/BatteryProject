@@ -2,7 +2,7 @@
 .coverage
 .ipynb_checkpoints
 .DS_Store
-.pptx
+*.pptx
 **/__pycache__/
 .env
 **/old/
