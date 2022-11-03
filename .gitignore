@@ -2,10 +2,12 @@
 .coverage
 .ipynb_checkpoints
 .DS_Store
-*.pptx
+
 **/__pycache__/
 .env
 **/old/
+
+**/*.pptx
 
 **/data/*.csv
 **/models/*.joblib
